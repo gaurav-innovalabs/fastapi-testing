@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException, Depends
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Annotated
 from datetime import date,datetime
+from app.enums import UserRoleEnum, CampaignStatusEnum
 
 from app.database import engine, SessionLocal
 import app.models as models
@@ -18,23 +19,24 @@ class UserBase(BaseModel):
     id: int
     name: str
     email: str
-    role: str
+    role: UserRoleEnum
 
 class UserCreate(BaseModel):
     name: str
     email: str
     password: str
-    role: str # TODO: make default role
+    role: UserRoleEnum = Field(default=UserRoleEnum.USER)
 
 class CampaignBase(BaseModel):
     id: int
     title: str
-    description: str # TODO: text data type
+    description: str # in pydentic str is used for text
+    status: CampaignStatusEnum
     user_name: str
     user_email: str
     start_date: datetime
     end_date: datetime
-    status: str # TODO: enum
+    status: CampaignStatusEnum = Field(default=CampaignStatusEnum.PENDING)
     created_at: datetime
 
 def get_db():
