@@ -1,0 +1,107 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Folio — Option B</title><style>:root{--paper:#f4ecdc;--paper-2:#e9dcc3;--ink:#2b2340;--ink-soft:#6b6180;--night:#23305e;--night-2:#3c4f8f;--moon:#f6e7b0;--fox:#d9682b;--fox-2:#b44d1c;--leaf:#3f7d5a;--leaf-2:#2c5e44;--berry:#b23a48;--gold:#d8a943;--radius:18px;--shadow:0 2px 0 rgba(43,35,64,.15),0 10px 24px rgba(43,35,64,.18)}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font-family:Georgia,"Iowan Old Style",serif;color:var(--ink);background:var(--paper);
+background-image:radial-gradient(rgba(120,90,40,.07) 1px,transparent 1.2px),radial-gradient(rgba(120,90,40,.05) 1px,transparent 1.2px);background-size:7px 7px,11px 11px;background-position:0 0,3px 5px;overflow:hidden}
+.lf-changed{outline:2px solid #e0457b;outline-offset:2px}
+.ui{font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+/* pop-up art */
+.book{position:relative;aspect-ratio:4/3;width:100%;max-width:760px;margin:0 auto;border-radius:10px;perspective:900px}
+.page{position:absolute;top:0;bottom:0;width:50%;background:var(--paper-2);box-shadow:inset 0 0 40px rgba(120,90,40,.25)}
+.page.left{left:0;border-radius:10px 0 0 10px;background:linear-gradient(90deg,#efe3cb,#ddcdaf)}
+.page.right{right:0;border-radius:0 10px 10px 0;background:linear-gradient(270deg,#efe3cb,#ddcdaf)}
+.gutter{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:rgba(80,60,30,.35)}
+.stage{position:absolute;inset:6% 5% 8%;transform:rotateX(14deg);transform-origin:50% 100%}
+.layer{position:absolute;filter:drop-shadow(0 6px 5px rgba(30,20,50,.35))}
+.sky{inset:0;border-radius:8px;background:radial-gradient(circle at 70% 30%,var(--night-2),var(--night) 70%);
+ background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.04) 0 6px,transparent 6px 14px),radial-gradient(circle at 70% 30%,var(--night-2),var(--night) 70%);clip-path:polygon(0 3%,4% 0,30% 2%,60% 0,96% 1%,100% 5%,99% 100%,1% 100%)}
+.moon{width:17%;aspect-ratio:1;right:16%;top:10%;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff6d0,var(--moon) 60%,#e3cb80);box-shadow:0 0 40px 10px rgba(246,231,176,.35)}
+.stars i{position:absolute;width:10px;height:10px;background:var(--gold);clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%)}
+.stars{inset:0}
+.hill3{left:-2%;right:-2%;bottom:0;height:52%;background:#4d5f9b;clip-path:polygon(0 40%,15% 22%,32% 36%,52% 10%,72% 30%,88% 18%,100% 28%,100% 100%,0 100%)}
+.hill2{left:-3%;right:-3%;bottom:0;height:38%;background:var(--leaf-2);background-image:radial-gradient(rgba(255,255,255,.12) 2px,transparent 2.5px);background-size:12px 12px;clip-path:polygon(0 30%,20% 50%,40% 22%,62% 44%,80% 20%,100% 38%,100% 100%,0 100%)}
+.tree{bottom:18%;width:11%;height:44%;background:var(--leaf);clip-path:polygon(50% 0,80% 34%,66% 34%,92% 66%,58% 66%,58% 100%,42% 100%,42% 66%,8% 66%,34% 34%,20% 34%)}
+.t1{left:9%}.t2{left:22%;height:34%;background:#4f9467}
+.fox{left:44%;bottom:17%;width:16%;height:16%;background:var(--fox);border-radius:60% 50% 30% 30%;
+ background-image:repeating-linear-gradient(60deg,rgba(255,255,255,.12) 0 3px,transparent 3px 8px)}
+.fox .ear{position:absolute;right:6%;top:-34%;width:34%;height:60%;background:var(--fox-2);clip-path:polygon(0 100%,30% 0,60% 70%,85% 0,100% 100%)}
+.fox .tail{position:absolute;left:-46%;bottom:20%;width:58%;height:44%;background:var(--fox-2);border-radius:80% 10% 60% 30%;box-shadow:inset 10px 0 0 #f4ecdc}
+.hill1{left:-4%;right:-4%;bottom:-2%;height:22%;background:#6b4a2e;background-image:repeating-linear-gradient(170deg,rgba(255,255,255,.08) 0 4px,transparent 4px 10px);clip-path:polygon(0 30%,14% 12%,30% 34%,50% 16%,70% 36%,86% 14%,100% 30%,100% 100%,0 100%)}
+/* controls */
+.btn{border:0;font:600 14px/1 -apple-system,"Segoe UI",Roboto,sans-serif;padding:11px 16px;border-radius:999px;background:var(--ink);color:var(--paper);box-shadow:var(--shadow)}
+.btn.ghost{background:#fff8ea;color:var(--ink);border:1.5px solid rgba(43,35,64,.2);box-shadow:none}
+.chip{display:inline-flex;gap:6px;align-items:center;font:600 12px -apple-system,"Segoe UI",Roboto,sans-serif;padding:7px 11px;border-radius:999px;background:#fff8ea;border:1.5px solid rgba(43,35,64,.18);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.slider{position:relative;height:6px;border-radius:3px;background:rgba(43,35,64,.15)}
+.slider .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--fox)}
+.slider .knob{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;border:3px solid var(--fox);box-shadow:var(--shadow)}
+.narr{font-size:20px;line-height:1.45;font-style:italic;text-align:center;max-width:640px;margin:0 auto}
+.kicker{font:700 11px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.thumb{border-radius:10px;aspect-ratio:4/3;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.thumb::after{content:"";position:absolute;left:-5%;right:-5%;bottom:0;height:45%;background:var(--leaf-2);clip-path:polygon(0 40%,30% 10%,60% 40%,100% 15%,100% 100%,0 100%)}
+
+body{background-color:#e6d8bc}
+main{height:100vh;display:flex;flex-direction:column;padding:14px 22px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:22px;font-weight:700}
+.icons{display:flex;gap:8px}.ic{width:40px;height:40px;border-radius:50%;background:#fff8ea;display:grid;place-items:center;box-shadow:var(--shadow);font:16px sans-serif}
+.ic.off{opacity:.45;text-decoration:line-through}
+.center{flex:1;display:grid;grid-template-columns:1fr 64px;gap:16px;min-height:0;align-items:center}
+.stagewrap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+.stagewrap .book{max-width:min(700px,calc((100vh - 330px)*1.333))}
+.chapter{position:absolute;left:4%;top:4%;z-index:3;background:var(--berry);color:#fff8ea;padding:12px 16px 14px;width:200px;clip-path:polygon(0 0,100% 0,100% 88%,92% 100%,0 100%);box-shadow:var(--shadow)}
+.chapter .kicker{color:#f7cfd4}.chapter b{font-size:20px;display:block;margin-top:4px}
+.vhinge{height:70%;display:flex;flex-direction:column;align-items:center;gap:8px;background:#fff8ea;border-radius:32px;padding:14px 0;box-shadow:var(--shadow)}
+.vtrack{position:relative;flex:1;width:6px;border-radius:3px;background:rgba(43,35,64,.15)}
+.vtrack .fill{position:absolute;bottom:0;left:0;right:0;height:72%;background:var(--fox);border-radius:3px}
+.vtrack .knob{position:absolute;left:50%;bottom:72%;width:26px;height:26px;margin:0 0 -13px -13px;border-radius:50%;background:#fff;border:3px solid var(--fox)}
+.deg{font:700 13px -apple-system,sans-serif}
+.dive{position:absolute;right:4%;bottom:6%;z-index:3;display:flex;gap:8px;align-items:center}
+.diveDots{display:flex;gap:4px}.diveDots i{width:8px;height:8px;border-radius:50%;background:rgba(43,35,64,.25)}.diveDots i.on{background:var(--ink)}
+.narr{margin:6px auto 0}
+.strip{display:flex;gap:12px;align-items:flex-end;overflow:hidden;padding:12px 4px 4px}
+.strip .t{flex:0 0 120px;font:600 11px -apple-system,sans-serif;color:var(--ink-soft)}
+.strip .t .thumb{margin-bottom:5px}
+.strip .t.cur .thumb{outline:3px solid var(--ink);outline-offset:2px}
+.strip .sep{flex:0 0 auto;align-self:center;font:700 10px -apple-system,sans-serif;letter-spacing:.12em;color:var(--ink-soft);writing-mode:vertical-rl;transform:rotate(180deg)}
+.lbl{font:500 11px -apple-system,sans-serif;color:var(--ink-soft)}
+@media (max-width:600px){
+ main{padding:10px 12px}
+ .center{grid-template-columns:1fr;grid-template-rows:1fr auto}
+ .vhinge{height:auto;flex-direction:row;padding:10px 14px;width:100%}
+ .vtrack{height:6px;width:auto}.vtrack .fill{height:auto;top:0;width:72%;right:auto}
+ .vtrack .knob{bottom:auto;top:50%;left:72%;margin:-13px 0 0 -13px}
+ .chapter{position:static;width:auto;margin-bottom:10px;align-self:stretch}
+ .dive{position:static;margin-top:10px}
+ .stagewrap .book{max-width:100%}
+ .narr{font-size:16px}
+ .strip .t{flex-basis:92px}
+ .lbl.dsk{display:none}
+}
+</style></head><body><main>
+<div class="top"><div class="logo">Folio</div><div class="icons lf-changed"><span class="ic" title="Showreel">▶</span><span class="ic" title="Sound">♪</span><span class="ic off" title="Haptics">✦</span></div></div>
+<div class="center">
+ <div class="stagewrap">
+  <div class="chapter lf-changed"><div class="kicker">Chapter I</div><b>The Paper Fox</b><div style="font:500 12px -apple-system,sans-serif;margin-top:4px;opacity:.85">Scene 1 of 2</div></div>
+  <div class="book lf-changed">
+  <div class="page left"></div><div class="page right"></div><div class="gutter"></div>
+  <div class="stage">
+    <div class="layer sky"></div><div class="layer moon"></div>
+    <div class="layer stars"><i style="left:12%;top:18%"></i><i style="left:30%;top:10%"></i><i style="left:58%;top:24%"></i><i style="left:90%;top:40%"></i><i style="left:44%;top:34%"></i></div>
+    <div class="layer hill3"></div><div class="layer hill2"></div>
+    <div class="layer tree t1"></div><div class="layer tree t2"></div>
+    <div class="layer fox"><span class="ear"></span><span class="tail"></span></div>
+    <div class="layer hill1"></div>
+  </div>
+</div>
+
+  <div class="dive lf-changed"><div class="diveDots"><i class="on"></i><i></i><i></i></div><button class="btn">⤢ Dive</button></div>
+  <p class="narr">“Every night the paper fox folded himself small, and followed the moon across the page.”</p>
+ </div>
+ <div class="vhinge lf-changed"><span class="lbl">open</span><div class="vtrack"><div class="fill"></div><div class="knob"></div></div><span class="lbl dsk">shut</span><span class="deg">130°</span></div>
+</div>
+<div class="strip lf-changed">
+ <span class="sep">CH · I</span><div class="t cur"><div class="thumb" style="background:#23305e"></div>1.1 The Paper Fox</div><div class="t "><div class="thumb" style="background:#2f4a7a"></div>1.2 Moon on the Pond</div>
+ <span class="sep">CH · II</span><div class="t"><div class="thumb" style="background:#3a2f5e"></div>2.1 The Lantern Wood</div><div class="t"><div class="thumb" style="background:#5a3a4e"></div>2.2 Owl's Library</div>
+ <span class="sep">CH · III</span><div class="t"><div class="thumb" style="background:#7a4a2e"></div>3.1 Over the Fold</div><div class="t"><div class="thumb" style="background:#b07a3a"></div>3.2 Morning Page</div>
+</div>
+</main></body></html>
