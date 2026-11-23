@@ -7,6 +7,7 @@ and yours to edit, reorder or delete at any time.
 
 - folio/: `npx expo install` silently adds `plugins: ["expo-audio"]` to app.json. Remove it to stay plugin-free for Expo Go. Also, the network can't reach the Expo versions API, so run expo install with EXPO_OFFLINE=1.
 - folio/ Playwright QA: reading the Skia WebGL canvas with drawImage/getImageData returns transparent pixels. Sample pixels from page.screenshot instead.
+- folio/: don't start `expo start --web` with CI=1. It turns off Metro's file watcher, so edits never reach the bundle and you debug stale code. On web, Skia <Canvas> also needs a flattened style object (StyleSheet.flatten), not an array, and it drops testID.
 
 ## Decisions
 
