@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sakura Voxel Garden · Three.js demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #ffd9e6; }
+    body { font-family: "Courier New", ui-monospace, monospace; color: #fff; }
+    canvas#scene { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas#scene:active { cursor: grabbing; }
+
+    #hud {
+      position: fixed; top: 18px; left: 18px; padding: 14px 18px;
+      background: rgba(40, 20, 35, 0.55); border: 3px solid #ffb7d0;
+      box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+      image-rendering: pixelated; user-select: none; min-width: 250px;
+    }
+    #hud h1 { font-size: 20px; letter-spacing: 1px; color: #ffd1e3; text-shadow: 2px 2px 0 #7a2850; }
+    #hud p { font-size: 12px; opacity: 0.85; margin: 4px 0 10px; }
+    #hud .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+    #hud button {
+      font: inherit; font-size: 13px; padding: 5px 10px; cursor: pointer; color: #fff;
+      background: #6b8e3a; border: 2px solid #2d3d18; box-shadow: inset -2px -3px 0 #4a6526, inset 2px 2px 0 #8fb553;
+    }
+    #hud button:hover { background: #7ba344; }
+    #hud button.off { background: #7a6a6a; box-shadow: inset -2px -3px 0 #5a4c4c, inset 2px 2px 0 #9a8a8a; }
+    #hud input[type="range"] { flex: 1; accent-color: #ff8fb8; }
+    #stats { position: fixed; bottom: 14px; right: 18px; font-size: 12px; opacity: 0.8; text-shadow: 1px 1px 0 #000; }
+  </style>
+  <!-- Three.js is loaded as an ES module from a CDN; no build step required. -->
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="hud">
+    <h1>🌸 SAKURA VOXEL GARDEN</h1>
+    <p>Drag to orbit · scroll to zoom</p>
+    <div class="row">
+      <button id="btnWind" type="button">Wind: ON</button>
+      <button id="btnOrbit" type="button">Auto-rotate: ON</button>
+    </div>
+    <div class="row">
+      <label for="petalRange">Petals</label>
+      <input id="petalRange" type="range" min="200" max="3000" step="100" value="1500" />
+      <span id="petalCount">1500</span>
+    </div>
+  </div>
+  <div id="stats">fps: --</div>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    // ---------------------------------------------------------------------
+    // Renderer / scene / camera
+    // ---------------------------------------------------------------------
+    const canvas = document.getElementById("scene");
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0xffd9e6, 45, 110);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 400);
+
+    // Sky: big inverted sphere with a vertical gradient (pink horizon -> blue zenith)
+    {
+      const skyGeo = new THREE.SphereGeometry(200, 32, 16);
+      const skyMat = new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        uniforms: {
+          top: { value: new THREE.Color(0x7ec8ff) },
+          bottom: { value: new THREE.Color(0xffd9e6) },
+        },
+        vertexShader: `
+          varying vec3 vPos;
+          void main() { vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+        `,
+        fragmentShader: `
+          uniform vec3 top; uniform vec3 bottom; varying vec3 vPos;
+          void main() {
+            float h = clamp(normalize(vPos).y * 1.6 + 0.15, 0.0, 1.0);
+            gl_FragColor = vec4(mix(bottom, top, h), 1.0);
+          }
+        `,
+      });
+      scene.add(new THREE.Mesh(skyGeo, skyMat));
+    }
+
+    // Lights
+    scene.add(new THREE.HemisphereLight(0xffeef6, 0x6b5a4a, 0.9));
+    const sun = new THREE.DirectionalLight(0xfff2e0, 1.6);
+    sun.position.set(30, 50, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 140 });
+    sun.shadow.bias = -0.0008;
+    scene.add(sun);
+
+    // ---------------------------------------------------------------------
+    // Pixel-art textures generated on a 16x16 canvas (blocky voxel look)
+    // ---------------------------------------------------------------------
+    function rand(seed) {
+      // tiny deterministic PRNG so textures/terrain look the same every load
+      let s = seed >>> 0;
+      return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+    }
+
+    function pixelTexture(draw, seed) {
+      const c = document.createElement("canvas");
+      c.width = c.height = 16;
+      const g = c.getContext("2d");
+      draw(g, rand(seed));
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function speckle(g, r, palette) {
+      for (let y = 0; y < 16; y++)
+        for (let x = 0; x < 16; x++) {
+          g.fillStyle = palette[Math.floor(r() * palette.length)];
+          g.fillRect(x, y, 1, 1);
+        }
+    }
+
+    const GRASS = ["#5f9e35", "#6aad3c", "#58932f", "#73b843", "#4f872a"];
+    const DIRT = ["#866043", "#79553a", "#93694a", "#6c4b33", "#8a6447"];
+    const STONE = ["#8a8a8a", "#7b7b7b", "#959595", "#6e6e6e"];
+    const PINK = ["#ffb7d0", "#ffa3c4", "#ffc9dc", "#f78fb6", "#ffd6e6", "#ff9fc0"];
+
+    const tex = {
+      grassTop: pixelTexture((g, r) => speckle(g, r, GRASS), 1),
+      grassSide: pixelTexture((g, r) => {
+        speckle(g, r, DIRT);
+        for (let x = 0; x < 16; x++) {
+          const depth = 3 + Math.floor(r() * 3);
+          for (let y = 0; y < depth; y++) { g.fillStyle = GRASS[Math.floor(r() * GRASS.length)]; g.fillRect(x, y, 1, 1); }
+        }
+      }, 2),
+      dirt: pixelTexture((g, r) => speckle(g, r, DIRT), 3),
+      stone: pixelTexture((g, r) => speckle(g, r, STONE), 4),
+      logSide: pixelTexture((g, r) => {
+        for (let x = 0; x < 16; x++) {
+          const base = x % 4 === 0 ? "#3e2a22" : x % 2 ? "#5a3d30" : "#4d342a";
+          for (let y = 0; y < 16; y++) { g.fillStyle = r() < 0.15 ? "#36241d" : base; g.fillRect(x, y, 1, 1); }
+        }
+      }, 5),
+      logTop: pixelTexture((g, r) => {
+        for (let y = 0; y < 16; y++)
+          for (let x = 0; x < 16; x++) {
+            const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+            g.fillStyle = d > 6.5 ? "#4d342a" : Math.floor(d) % 2 ? "#b58d64" : "#9e7650";
+            g.fillRect(x, y, 1, 1);
+          }
+      }, 6),
+      leaves: pixelTexture((g, r) => {
+        for (let y = 0; y < 16; y++)
+          for (let x = 0; x < 16; x++) {
+            g.fillStyle = r() < 0.12 ? "rgba(0,0,0,0)" : PINK[Math.floor(r() * PINK.length)];
+            g.clearRect(x, y, 1, 1);
+            g.fillRect(x, y, 1, 1);
+          }
+      }, 7),
+      plank: pixelTexture((g, r) => {
+        speckle(g, r, ["#b8875a", "#a97a4f", "#c29263"]);
+        g.fillStyle = "#6e4a2f";
+        for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1);
+      }, 8),
+      water: pixelTexture((g, r) => speckle(g, r, ["#3f76e4", "#4a82ee", "#3566d0", "#5590f5"]), 9),
+    };
+
+    const lambert = (map, extra = {}) => new THREE.MeshLambertMaterial({ map, ...extra });
+    // BoxGeometry face order: +x, -x, +y, -y, +z, -z
+    const MAT = {
+      grass: [lambert(tex.grassSide), lambert(tex.grassSide), lambert(tex.grassTop), lambert(tex.dirt), lambert(tex.grassSide), lambert(tex.grassSide)],
+      dirt: lambert(tex.dirt),
+      stone: lambert(tex.stone),
+      log: [lambert(tex.logSide), lambert(tex.logSide), lambert(tex.logTop), lambert(tex.logTop), lambert(tex.logSide), lambert(tex.logSide)],
+      leaves: lambert(tex.leaves, { transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, emissive: 0x5a2038 }),
+      plank: lambert(tex.plank),
+      water: lambert(tex.water, { transparent: true, opacity: 0.75 }),
+    };
+
+    // ---------------------------------------------------------------------
+    // Voxel world: collect block positions by type, then draw each type as
+    // one InstancedMesh (thousands of cubes in a handful of draw calls).
+    // ---------------------------------------------------------------------
+    const SIZE = 40;              // world is SIZE x SIZE columns
+    const HALF = SIZE / 2;
+    const WATER_LEVEL = 2;
+    const blocks = { grass: [], dirt: [], stone: [], log: [], leaves: [], plank: [], water: [] };
+    const occupied = new Set();
+    const key = (x, y, z) => `${x},${y},${z}`;
+    function put(type, x, y, z) {
+      const k = key(x, y, z);
+      if (occupied.has(k)) return;
+      occupied.add(k);
+      blocks[type].push([x, y, z]);
+    }
+
+    // Smooth-ish rolling hills from a few summed sine waves + a pond in one corner.
+    function heightAt(x, z) {
+      const h = 4
+        + Math.sin(x * 0.18) * 1.6
+        + Math.cos(z * 0.15) * 1.4
+        + Math.sin((x + z) * 0.09) * 2.0;
+      const pond = Math.hypot(x - 8, z + 8);
+      const dip = pond < 7 ? (7 - pond) * 0.8 : 0;
+      return Math.max(1, Math.round(h - dip));
+    }
+
+    const heights = [];
+    for (let x = -HALF; x < HALF; x++) {
+      heights[x + HALF] = [];
+      for (let z = -HALF; z < HALF; z++) {
+        const h = heightAt(x, z);
+        heights[x + HALF][z + HALF] = h;
+        for (let y = 0; y <= h; y++) {
+          // Only the outer skirt and the top few layers are visible, skip the rest.
+          const edge = x === -HALF || x === HALF - 1 || z === -HALF || z === HALF - 1;
+          if (!edge && y < h - 2) continue;
+          const type = y === h ? (h <= WATER_LEVEL ? "dirt" : "grass") : y < h - 2 ? "stone" : "dirt";
+          put(type, x, y, z);
+        }
+        for (let y = h + 1; y <= WATER_LEVEL; y++) put("water", x, y, z);
+      }
+    }
+    const groundAt = (x, z) => heights[x + HALF]?.[z + HALF] ?? 0;
+
+    // Cherry blossom tree: crooked trunk with a couple of branches and big pink blob canopies.
+    function cherryTree(x, z, r) {
+      let y = groundAt(x, z) + 1;
+      const trunk = 5 + Math.floor(r() * 3);
+      let tx = x, tz = z;
+      for (let i = 0; i < trunk; i++) {
+        put("log", tx, y + i, tz);
+        if (i > 2 && r() < 0.35) { tx += r() < 0.5 ? 1 : -1; put("log", tx, y + i, tz); }
+      }
+      const top = y + trunk;
+      const crowns = [[tx, top, tz]];
+      // two side branches
+      for (let b = 0; b < 2; b++) {
+        const dx = Math.round((r() - 0.5) * 6), dz = Math.round((r() - 0.5) * 6);
+        const steps = Math.max(Math.abs(dx), Math.abs(dz));
+        for (let s = 1; s <= steps; s++) put("log", tx + Math.round((dx * s) / steps), top - 2 + Math.floor(s / 2), tz + Math.round((dz * s) / steps));
+        crowns.push([tx + dx, top - 1 + Math.floor(steps / 2), tz + dz]);
+      }
+      for (const [cx, cy, cz] of crowns) {
+        const rad = 2.6 + r() * 1.2;
+        for (let dx = -4; dx <= 4; dx++)
+          for (let dy = -2; dy <= 3; dy++)
+            for (let dz = -4; dz <= 4; dz++) {
+              const d = Math.hypot(dx, dy * 1.4, dz);
+              if (d < rad && r() > 0.08) put("leaves", cx + dx, cy + dy, cz + dz);
+            }
+      }
+      return crowns;
+    }
+
+    const treeRand = rand(42);
+    const treeSpots = [[-10, -6], [-4, 9], [9, 6], [-13, 11], [3, -2], [13, -12], [-12, -14]];
+    const canopyCenters = treeSpots.flatMap(([x, z]) => cherryTree(x, z, treeRand));
+
+    // A small wooden bench + path to give the garden a focal point.
+    {
+      const bx = -1, bz = 4, by = groundAt(bx, bz) + 1;
+      for (let i = 0; i < 3; i++) put("plank", bx + i, by, bz);
+      for (let z = -HALF + 1; z < 3; z++) {
+        const h = groundAt(0, z);
+        if (h > WATER_LEVEL) {
+          blocks.grass = blocks.grass.filter(([a, b, c]) => !(a === 0 && b === h && c === z));
+          blocks.plank.push([0, h, z]);
+        }
+      }
+    }
+
+    const cube = new THREE.BoxGeometry(1, 1, 1);
+    const dummy = new THREE.Object3D();
+    for (const [type, list] of Object.entries(blocks)) {
+      if (!list.length) continue;
+      const mesh = new THREE.InstancedMesh(cube, MAT[type], list.length);
+      list.forEach(([x, y, z], i) => {
+        dummy.position.set(x, y, z);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      });
+      mesh.castShadow = type !== "water";
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+    }
+
+    // ---------------------------------------------------------------------
+    // Blocky drifting clouds
+    // ---------------------------------------------------------------------
+    const clouds = new THREE.Group();
+    {
+      const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xbbbbcc, transparent: true, opacity: 0.92 });
+      const cr = rand(99);
+      for (let c = 0; c < 9; c++) {
+        const w = 4 + Math.floor(cr() * 6), d = 3 + Math.floor(cr() * 4);
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w * 2, 1.5, d * 2), cloudMat);
+        m.position.set((cr() - 0.5) * 120, 38 + cr() * 6, (cr() - 0.5) * 120);
+        clouds.add(m);
+      }
+      scene.add(clouds);
+    }
+
+    // ---------------------------------------------------------------------
+    // Sakura petals: one InstancedMesh, each petal flutters, spins on all
+    // three axes, sways side to side and is pushed by gusting wind.
+    // ---------------------------------------------------------------------
+    function petalGeometry() {
+      // Classic sakura petal: rounded teardrop with a notch at the tip.
+      const s = new THREE.Shape();
+      s.moveTo(0, -0.5);
+      s.bezierCurveTo(0.35, -0.35, 0.42, 0.15, 0.22, 0.45);
+      s.lineTo(0, 0.34);                 // notch
+      s.lineTo(-0.22, 0.45);
+      s.bezierCurveTo(-0.42, 0.15, -0.35, -0.35, 0, -0.5);
+      const g = new THREE.ShapeGeometry(s, 6);
+      // Give it a gentle curl so it catches light as it spins.
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) p.setZ(i, (p.getX(i) ** 2) * 0.5);
+      g.computeVertexNormals();
+      g.scale(0.32, 0.32, 0.32);
+      return g;
+    }
+
+    const MAX_PETALS = 3000;
+    // Unlit so petals stay bright pink from every angle (lit double-sided planes go dark on their back face).
+    const petalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const petals = new THREE.InstancedMesh(petalGeometry(), petalMat, MAX_PETALS);
+    petals.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(petals);
+
+    const petalColors = [0xffc1d6, 0xffb0cb, 0xffd6e4, 0xff9ebf, 0xfff0f5].map((c) => new THREE.Color(c));
+    const P = []; // per-petal state
+    const pr = rand(2024);
+    function spawnPetal(p, anywhere) {
+      // Most petals start inside a canopy so they visibly drop from the trees.
+      if (pr() < 0.7) {
+        const [cx, cy, cz] = canopyCenters[Math.floor(pr() * canopyCenters.length)];
+        p.pos.set(cx + (pr() - 0.5) * 6, cy + (pr() - 0.5) * 3, cz + (pr() - 0.5) * 6);
+      } else {
+        p.pos.set((pr() - 0.5) * SIZE, 14 + pr() * 14, (pr() - 0.5) * SIZE);
+      }
+      if (anywhere) p.pos.y = 2 + pr() * 24;
+      p.fall = 0.9 + pr() * 1.0;                        // units / sec
+      p.swayAmp = 0.6 + pr() * 1.2;
+      p.swayFreq = 0.6 + pr() * 1.2;
+      p.phase = pr() * Math.PI * 2;
+      p.rot.set(pr() * Math.PI * 2, pr() * Math.PI * 2, pr() * Math.PI * 2);
+      p.spin.set((pr() - 0.5) * 4, (pr() - 0.5) * 3, (pr() - 0.5) * 4);
+      p.scale = 0.7 + pr() * 0.7;
+      p.landed = 0;
+    }
+    for (let i = 0; i < MAX_PETALS; i++) {
+      const p = { pos: new THREE.Vector3(), rot: new THREE.Euler(), spin: new THREE.Vector3() };
+      spawnPetal(p, true);
+      P.push(p);
+      petals.setColorAt(i, petalColors[i % petalColors.length]);
+    }
+    petals.instanceColor.needsUpdate = true;
+
+    let petalCount = 1500;
+    let windOn = true;
+    const quat = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+
+    function updatePetals(dt, t) {
+      // Gusting wind: slow base breeze plus periodic stronger gusts.
+      const gust = windOn ? 0.8 + Math.max(0, Math.sin(t * 0.35)) ** 3 * 3.0 : 0;
+      const windX = gust, windZ = windOn ? Math.sin(t * 0.21) * 0.8 : 0;
+      for (let i = 0; i < petalCount; i++) {
+        const p = P[i];
+        if (p.landed > 0) {
+          // Rest on the ground for a moment, then shrink away and respawn.
+          p.landed -= dt;
+          const k = Math.min(1, p.landed / 1.5);
+          scl.setScalar(p.scale * k);
+          if (p.landed <= 0) spawnPetal(p, false);
+        } else {
+          const sway = Math.sin(t * p.swayFreq + p.phase);
+          p.pos.x += (windX + sway * p.swayAmp) * dt;
+          p.pos.z += (windZ + Math.cos(t * p.swayFreq * 0.8 + p.phase) * p.swayAmp * 0.6) * dt;
+          // Petals fall slower while turned flat (fluttering), faster edge-on.
+          p.pos.y -= p.fall * (0.6 + 0.4 * Math.abs(sway)) * dt;
+          p.rot.x += p.spin.x * dt;
+          p.rot.y += p.spin.y * dt;
+          p.rot.z += p.spin.z * dt;
+          // Wrap horizontally so the wind never empties the garden.
+          if (p.pos.x > HALF + 4) p.pos.x -= SIZE + 8;
+          if (p.pos.x < -HALF - 4) p.pos.x += SIZE + 8;
+          if (p.pos.z > HALF + 4) p.pos.z -= SIZE + 8;
+          if (p.pos.z < -HALF - 4) p.pos.z += SIZE + 8;
+          const gx = Math.round(p.pos.x), gz = Math.round(p.pos.z);
+          const floor = Math.max(groundAt(gx, gz), WATER_LEVEL) + 0.52;
+          if (p.pos.y <= floor && Math.abs(p.pos.x) < HALF && Math.abs(p.pos.z) < HALF) {
+            p.pos.y = floor;
+            p.rot.set(-Math.PI / 2, 0, p.rot.z);   // lie flat
+            p.landed = 3 + pr() * 4;
+          } else if (p.pos.y < -5) {
+            spawnPetal(p, false);
+          }
+          scl.setScalar(p.scale);
+        }
+        quat.setFromEuler(p.rot);
+        dummy.matrix.compose(p.pos, quat, scl);
+        petals.setMatrixAt(i, dummy.matrix);
+      }
+      petals.count = petalCount;
+      petals.instanceMatrix.needsUpdate = true;
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: drag to orbit, wheel to zoom, optional auto-rotate.
+    // (Hand-rolled so the demo only needs the core three.js module.)
+    // ---------------------------------------------------------------------
+    const orbit = { theta: 0.8, phi: 1.05, radius: 52, target: new THREE.Vector3(0, 6, 0), auto: true };
+    let dragging = false, lastX = 0, lastY = 0;
+    canvas.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointerup", () => (dragging = false));
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      orbit.theta -= (e.clientX - lastX) * 0.006;
+      orbit.phi = THREE.MathUtils.clamp(orbit.phi - (e.clientY - lastY) * 0.006, 0.25, 1.45);
+      lastX = e.clientX; lastY = e.clientY;
+    });
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      orbit.radius = THREE.MathUtils.clamp(orbit.radius * (1 + Math.sign(e.deltaY) * 0.08), 24, 95);
+    }, { passive: false });
+
+    function updateCamera(dt) {
+      if (orbit.auto && !dragging) orbit.theta += dt * 0.12;
+      const { theta, phi, radius, target } = orbit;
+      camera.position.set(
+        target.x + radius * Math.sin(phi) * Math.cos(theta),
+        target.y + radius * Math.cos(phi),
+        target.z + radius * Math.sin(phi) * Math.sin(theta),
+      );
+      camera.lookAt(target);
+    }
+
+    // ---------------------------------------------------------------------
+    // HUD wiring
+    // ---------------------------------------------------------------------
+    const btnWind = document.getElementById("btnWind");
+    const btnOrbit = document.getElementById("btnOrbit");
+    const range = document.getElementById("petalRange");
+    const countLabel = document.getElementById("petalCount");
+    btnWind.onclick = () => { windOn = !windOn; btnWind.textContent = `Wind: ${windOn ? "ON" : "OFF"}`; btnWind.classList.toggle("off", !windOn); };
+    btnOrbit.onclick = () => { orbit.auto = !orbit.auto; btnOrbit.textContent = `Auto-rotate: ${orbit.auto ? "ON" : "OFF"}`; btnOrbit.classList.toggle("off", !orbit.auto); };
+    range.oninput = () => { petalCount = Number(range.value); countLabel.textContent = petalCount; };
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ---------------------------------------------------------------------
+    // Main loop
+    // ---------------------------------------------------------------------
+    const stats = document.getElementById("stats");
+    const clock = new THREE.Clock();
+    let frames = 0, fpsTime = 0;
+    function tick() {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const t = clock.elapsedTime;
+      updatePetals(dt, t);
+      clouds.children.forEach((c, i) => { c.position.x += dt * (0.8 + (i % 3) * 0.3); if (c.position.x > 70) c.position.x = -70; });
+      updateCamera(dt);
+      renderer.render(scene, camera);
+
+      frames++; fpsTime += dt;
+      if (fpsTime > 0.5) { stats.textContent = `fps: ${Math.round(frames / fpsTime)} · petals: ${petalCount}`; frames = 0; fpsTime = 0; }
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    // Exposed for automated checks / debugging in the console.
+    window.__sakura = { scene, petals, getPetalCount: () => petalCount, isWindOn: () => windOn, orbit, P };
+  </script>
+</body>
+</html>
