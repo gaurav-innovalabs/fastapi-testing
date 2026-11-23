@@ -56,11 +56,17 @@
     // ---------------------------------------------------------------
     // Renderer / scene / camera
     // ---------------------------------------------------------------
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    // Cap the pixel ratio: rendering at 2x DPR is 4x the fragments for little visible gain here.
+    const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, 1.5);
+    let pixelRatio = MAX_PIXEL_RATIO;
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // The terrain and trees never move, so render the shadow map once instead of every frame.
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     document.body.appendChild(renderer.domElement);
 
@@ -242,22 +248,56 @@
       if (b > WATER) { set(lx, b + 1, lz, 'stone'); set(lx, b + 2, lz, 'stone'); set(lx, b + 3, lz, 'lantern'); }
     }
 
-    // Build one InstancedMesh per block type, culling fully hidden blocks
-    const neighbours = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
-    const solid = t => t && t !== 'blossom';
-    const byType = {};
+    // Build one merged mesh per block type containing only the faces that touch air
+    // (instead of a full cube per block): far fewer triangles, vertices and overdraw.
+    // Blossom texture is opaque, so faces between two blossoms are hidden too.
+    const neighbours = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]; // BoxGeometry face order
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const boxPos = box.attributes.position.array, boxNorm = box.attributes.normal.array, boxUv = box.attributes.uv.array;
+    const faces = {}; // type -> [faceDir][] of [x, y, z]
+    let visibleFaces = 0;
     for (const [k, t] of blocks) {
       const [x, y, z] = k.split(',').map(Number);
-      const hidden = neighbours.every(([a, b, c]) => solid(blocks.get(key(x + a, y + b, z + c)))) && t !== 'blossom';
-      if (hidden) continue;
-      (byType[t] ||= []).push([x, y, z]);
+      neighbours.forEach(([a, b, c], f) => {
+        if (f === 3 && y === 0) return; // underside of the world is never seen
+        if (blocks.has(key(x + a, y + b, z + c))) return;
+        ((faces[t] ||= [[], [], [], [], [], []])[f]).push([x, y, z]);
+        visibleFaces++;
+      });
     }
-    const box = new THREE.BoxGeometry(1, 1, 1);
+    function buildFaces(perDir, multiMaterial) {
+      const n = perDir.reduce((s, l) => s + l.length, 0);
+      const position = new Float32Array(n * 12), normal = new Float32Array(n * 12), uv = new Float32Array(n * 8);
+      const index = new Uint32Array(n * 6);
+      const g = new THREE.BufferGeometry();
+      let q = 0;
+      perDir.forEach((list, f) => {
+        const start = q;
+        for (const [x, y, z] of list) {
+          for (let v = 0; v < 4; v++) {
+            const src = (f * 4 + v) * 3, dst = (q * 4 + v) * 3;
+            position[dst] = boxPos[src] + x; position[dst + 1] = boxPos[src + 1] + y; position[dst + 2] = boxPos[src + 2] + z;
+            normal[dst] = boxNorm[src]; normal[dst + 1] = boxNorm[src + 1]; normal[dst + 2] = boxNorm[src + 2];
+            uv[(q * 4 + v) * 2] = boxUv[(f * 4 + v) * 2]; uv[(q * 4 + v) * 2 + 1] = boxUv[(f * 4 + v) * 2 + 1];
+          }
+          const o = q * 4; // same winding as BoxGeometry
+          index.set([o, o + 2, o + 1, o + 2, o + 3, o + 1], q * 6);
+          q++;
+        }
+        if (multiMaterial && q > start) g.addGroup(start * 6, (q - start) * 6, f);
+      });
+      g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      g.setIndex(new THREE.BufferAttribute(index, 1));
+      g.computeBoundingSphere();
+      return g;
+    }
     const dummy = new THREE.Object3D();
     const blossomMeshes = [];
-    for (const [t, list] of Object.entries(byType)) {
-      const mesh = new THREE.InstancedMesh(box, materials[t], list.length);
-      list.forEach(([x, y, z], i) => { dummy.position.set(x, y, z); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
+    for (const [t, perDir] of Object.entries(faces)) {
+      const mesh = new THREE.Mesh(buildFaces(perDir, Array.isArray(materials[t])), materials[t]);
+      if (t !== 'blossom') { mesh.matrixAutoUpdate = false; mesh.updateMatrix(); } // static; blossoms sway
       mesh.castShadow = t !== 'lantern';
       mesh.receiveShadow = true;
       scene.add(mesh);
@@ -282,21 +322,33 @@
       if (b > WATER) { const p = new THREE.PointLight(0xffb347, 6, 9, 1.8); p.position.set(lx, b + 3, lz); scene.add(p); }
     }
 
-    // Blocky clouds
-    const clouds = new THREE.Group();
+    // Blocky clouds: one InstancedMesh (a single draw call) instead of ~40 separate meshes
     const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
     const cr = rand(99);
+    const cloudParts = []; // { cloud, offset: Vector3, size: Vector3 }
+    const cloudPos = [];
     for (let i = 0; i < 9; i++) {
-      const c = new THREE.Group();
       const parts = 3 + Math.floor(cr() * 4);
       for (let p = 0; p < parts; p++) {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(4 + cr() * 6, 1.5, 3 + cr() * 5), cloudMat);
-        m.position.set(p * 3 - parts * 1.5, cr() * 0.5, (cr() - 0.5) * 4);
-        c.add(m);
+        const size = new THREE.Vector3(4 + cr() * 6, 1.5, 3 + cr() * 5);
+        cloudParts.push({ cloud: i, size, offset: new THREE.Vector3(p * 3 - parts * 1.5, cr() * 0.5, (cr() - 0.5) * 4) });
       }
-      c.position.set((cr() - 0.5) * 120, 30 + cr() * 8, (cr() - 0.5) * 120);
-      clouds.add(c);
+      cloudPos.push(new THREE.Vector3((cr() - 0.5) * 120, 30 + cr() * 8, (cr() - 0.5) * 120));
     }
+    const clouds = new THREE.InstancedMesh(box, cloudMat, cloudParts.length);
+    clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    clouds.frustumCulled = false; // instances move every frame
+    const updateClouds = () => {
+      cloudParts.forEach((c, i) => {
+        dummy.position.copy(cloudPos[c.cloud]).add(c.offset);
+        dummy.scale.copy(c.size);
+        dummy.updateMatrix();
+        clouds.setMatrixAt(i, dummy.matrix);
+      });
+      dummy.scale.setScalar(1);
+      clouds.instanceMatrix.needsUpdate = true;
+    };
+    updateClouds();
     scene.add(clouds);
 
     // ---------------------------------------------------------------
@@ -319,12 +371,14 @@
     petalGeo.computeVertexNormals();
     petalGeo.scale(0.32, 0.32, 0.32);
 
-    // Unlit so both faces stay soft pink while tumbling (lit double-sided petals turn grey on their back face)
-    const petalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.95 });
+    // Unlit so both faces stay soft pink while tumbling (lit double-sided petals turn grey on their back face).
+    // Opaque on purpose: a transparent DoubleSide material is drawn in two passes with blending.
+    const petalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
     const MAX_PETALS = 2500;
     const petals = new THREE.InstancedMesh(petalGeo, petalMat, MAX_PETALS);
     petals.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     petals.castShadow = false;
+    petals.frustumCulled = false; // petals cover the whole garden and move every frame
     scene.add(petals);
 
     const P = []; // per-petal state
@@ -376,19 +430,35 @@
       ui.orbit.textContent = `Auto-orbit: ${controls.autoRotate ? 'on' : 'off'}`;
     };
     // exposed for automated checks / tinkering in the console
-    window.sakura = { scene, petals, P, get paused() { return paused; } };
+    window.sakura = { scene, renderer, petals, P, get paused() { return paused; }, get pixelRatio() { return pixelRatio; } };
 
     // ---------------------------------------------------------------
     // Animation loop
     // ---------------------------------------------------------------
     const clock = new THREE.Clock();
     const tmpQ = new THREE.Quaternion();
+    const zAxis = new THREE.Vector3(0, 0, 1);
     const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     let time = 0;
+    let statsText = '';
+    // Adaptive resolution: if frames are consistently slow, render fewer pixels (and back up when there's headroom).
+    let perfFrames = 0, perfTime = 0;
+    function adaptResolution(rawDt) {
+      perfFrames++; perfTime += rawDt;
+      if (perfTime < 1) return;
+      const avg = perfTime / perfFrames;
+      perfFrames = 0; perfTime = 0;
+      let next = pixelRatio;
+      if (avg > 1 / 45) next = Math.max(0.6, pixelRatio - 0.2);
+      else if (avg < 1 / 58) next = Math.min(MAX_PIXEL_RATIO, pixelRatio + 0.1);
+      if (Math.abs(next - pixelRatio) > 0.01) { pixelRatio = next; renderer.setPixelRatio(pixelRatio); }
+    }
 
     function animate() {
       requestAnimationFrame(animate);
-      const dt = Math.min(clock.getDelta(), 0.05);
+      const rawDt = clock.getDelta();
+      const dt = Math.min(rawDt, 0.05);
+      if (rawDt < 0.5) adaptResolution(rawDt); // ignore pauses such as a backgrounded tab
       controls.update();
 
       if (!paused) {
@@ -420,7 +490,7 @@
             if (p.pos.y <= g + 0.02) {
               p.pos.y = g + 0.02;
               p.landed = 3 + pr() * 5;  // rest on the grass / water for a few seconds
-              p.q.copy(flat).multiply(tmpQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), pr() * Math.PI * 2));
+              p.q.copy(flat).multiply(tmpQ.setFromAxisAngle(zAxis, pr() * Math.PI * 2));
             } else {
               p.q.setFromAxisAngle(p.axis, p.angle);
             }
@@ -438,12 +508,15 @@
         for (const m of blossomMeshes) m.position.x = Math.sin(time * 0.8) * 0.03 * windK;
 
         // drift clouds
-        for (const c of clouds.children) {
-          c.position.x += dt * (1 + windK);
-          if (c.position.x > 70) c.position.x = -70;
+        for (const c of cloudPos) {
+          c.x += dt * (1 + windK);
+          if (c.x > 70) c.x = -70;
         }
+        updateClouds();
         water.material.opacity = 0.6 + Math.sin(time * 1.5) * 0.04;
-        ui.stats.textContent = `${count} petals · ${blocks.size} blocks`;
+        // only touch the DOM when the text actually changes (avoids per-frame layout work)
+        const text = `${count} petals · ${blocks.size} blocks · ${visibleFaces} faces`;
+        if (text !== statsText) ui.stats.textContent = statsText = text;
       }
       renderer.render(scene, camera);
     }
