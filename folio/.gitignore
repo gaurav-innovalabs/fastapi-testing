@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.DS_Store
+
+# Copied from canvaskit-wasm by `npm install` (postinstall: setup-skia-web).
+# About 7 MB, so it's regenerated after every install instead of committed.
+public/canvaskit.wasm
