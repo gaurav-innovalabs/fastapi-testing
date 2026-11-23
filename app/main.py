@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 from typing import List, Annotated
@@ -51,6 +53,12 @@ db_dependency = Annotated[Session, Depends(get_db)]
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+STATUS_PAGE = Path(__file__).parent / "static" / "status" / "index.html"
+
+@app.get("/status", include_in_schema=False)
+def status_page():
+    return FileResponse(STATUS_PAGE, media_type="text/html")
 
 @app.get("/users", response_model=List[UserBase])
 def read_users(db: db_dependency):
