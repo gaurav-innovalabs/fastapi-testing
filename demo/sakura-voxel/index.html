@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sakura Voxel Garden · three.js demo</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #fbd3e0; font-family: "Courier New", monospace; }
+    canvas { display: block; }
+    #hud {
+      position: fixed; top: 16px; left: 16px; padding: 12px 14px;
+      background: rgba(30, 20, 30, 0.55); color: #fff; border: 3px solid #fff;
+      image-rendering: pixelated; box-shadow: 4px 4px 0 rgba(0,0,0,0.35);
+      font-size: 13px; line-height: 1.6; user-select: none; min-width: 210px;
+    }
+    #hud h1 { font-size: 15px; margin: 0 0 6px; letter-spacing: 1px; color: #ffc4dd; text-shadow: 2px 2px 0 #7a2b4d; }
+    #hud label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    #hud input[type=range] { width: 110px; accent-color: #ff8fbf; }
+    #hud button {
+      margin-top: 6px; margin-right: 4px; font: inherit; font-size: 12px; cursor: pointer;
+      background: #8b8b8b; color: #fff; border: 2px solid #fff; padding: 3px 8px;
+      box-shadow: inset -2px -2px 0 #555, inset 2px 2px 0 #c6c6c6;
+    }
+    #hud button:hover { background: #a98aa0; }
+    #hint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); color: #fff;
+      font-size: 12px; text-shadow: 1px 1px 0 #000; opacity: 0.85; pointer-events: none; }
+  </style>
+  <!-- three.js is loaded from a CDN; no build step needed. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="hud">
+    <h1>SAKURA VOXEL GARDEN</h1>
+    <label>Petals <input id="petals" type="range" min="100" max="2500" step="50" value="1200" /></label>
+    <label>Wind <input id="wind" type="range" min="0" max="3" step="0.1" value="1" /></label>
+    <label>Fall speed <input id="speed" type="range" min="0.2" max="2" step="0.1" value="1" /></label>
+    <div>
+      <button id="pause">Pause</button>
+      <button id="orbit">Auto-orbit: on</button>
+    </div>
+    <div id="stats" style="opacity:.8;font-size:11px;margin-top:4px"></div>
+  </div>
+  <div id="hint">drag to orbit · scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ---------------------------------------------------------------
+    // Renderer / scene / camera
+    // ---------------------------------------------------------------
+    // No MSAA: it was the single largest per-frame cost in profiling, and hard pixel edges suit the voxel look.
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    // Cap the pixel ratio: rendering at 2x DPR is 4x the fragments for little visible gain here.
+    const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, 1.5);
+    let pixelRatio = MAX_PIXEL_RATIO;
+    renderer.setPixelRatio(pixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    // PCF (not PCFSoft): every lit pixel samples the shadow map each frame, and soft PCF takes far more samples.
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    // The terrain and trees never move, so render the shadow map once instead of every frame.
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xfbd3e0);
+    scene.fog = new THREE.Fog(0xfbd3e0, 40, 95);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 300);
+    camera.position.set(34, 24, 34);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 4, 0);
+    controls.enableDamping = true;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.6;
+    controls.maxPolarAngle = Math.PI * 0.48;
+    controls.minDistance = 16;
+    controls.maxDistance = 80;
+
+    // Lights
+    scene.add(new THREE.HemisphereLight(0xfff0f6, 0x6a8a5a, 0.9));
+    const sun = new THREE.DirectionalLight(0xfff2e0, 1.6);
+    sun.position.set(30, 45, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 120 });
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.04;
+    scene.add(sun);
+
+    // ---------------------------------------------------------------
+    // Pixel-art textures (16x16, generated on a canvas -> NearestFilter)
+    // ---------------------------------------------------------------
+    function rand(seed) { // small deterministic PRNG (mulberry32)
+      return function () {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function pixelTexture(paint, seed = 1) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 16;
+      const g = c.getContext('2d');
+      const r = rand(seed);
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        g.fillStyle = paint(x, y, r);
+        g.fillRect(x, y, 1, 1);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+
+    const tex = {
+      grassTop: pixelTexture((x, y, r) => pick(r, ['#6fb543', '#5fa336', '#7cc14d', '#68ad3e']), 11),
+      grassSide: pixelTexture((x, y, r) => {
+        const edge = 3 + ((x * 7) % 3 === 0 ? 1 : 0);
+        return y < edge ? pick(r, ['#6fb543', '#5fa336', '#7cc14d']) : pick(r, ['#8a5a3b', '#7a4f33', '#94653f', '#6e472e']);
+      }, 12),
+      dirt: pixelTexture((x, y, r) => pick(r, ['#8a5a3b', '#7a4f33', '#94653f', '#6e472e']), 13),
+      stone: pixelTexture((x, y, r) => pick(r, ['#8c8c8c', '#7d7d7d', '#969696', '#737373']), 14),
+      sand: pixelTexture((x, y, r) => pick(r, ['#e8d9a0', '#dccd92', '#f0e2ac']), 15),
+      barkSide: pixelTexture((x, y, r) => (x % 4 === 0 ? '#3e2418' : pick(r, ['#5a3626', '#4d2e20', '#633c2a'])), 16),
+      barkTop: pixelTexture((x, y, r) => {
+        const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+        return Math.floor(d) % 3 === 0 ? '#7a5038' : '#9a6a4a';
+      }, 17),
+      blossom: pixelTexture((x, y, r) => {
+        const v = r();
+        if (v < 0.08) return '#ffffff';
+        if (v < 0.18) return '#d9668f';
+        return pick(r, ['#ffb7d0', '#ffa6c6', '#ffc6da', '#f598ba']);
+      }, 18),
+      plank: pixelTexture((x, y, r) => (y % 4 === 0 ? '#6b3f1f' : pick(r, ['#b5743c', '#a8693a', '#bf7f45'])), 19),
+      lantern: pixelTexture((x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15 || x === 7 ? '#3a2a20' : pick(r, ['#ffd27a', '#ffc85a', '#ffe0a0'])), 20),
+    };
+
+    const mat = (t, extra = {}) => new THREE.MeshLambertMaterial({ map: t, ...extra });
+    // BoxGeometry material order: +x, -x, +y, -y, +z, -z
+    const materials = {
+      grass: [mat(tex.grassSide), mat(tex.grassSide), mat(tex.grassTop), mat(tex.dirt), mat(tex.grassSide), mat(tex.grassSide)],
+      dirt: mat(tex.dirt),
+      stone: mat(tex.stone),
+      sand: mat(tex.sand),
+      log: [mat(tex.barkSide), mat(tex.barkSide), mat(tex.barkTop), mat(tex.barkTop), mat(tex.barkSide), mat(tex.barkSide)],
+      blossom: mat(tex.blossom, { transparent: false }),
+      plank: mat(tex.plank),
+      lantern: mat(tex.lantern, { emissive: 0xffb347, emissiveIntensity: 0.6 }),
+    };
+
+    // ---------------------------------------------------------------
+    // Voxel world (heightmap terrain + pond + sakura trees)
+    // ---------------------------------------------------------------
+    const SIZE = 48, HALF = SIZE / 2, WATER = 2;
+    const blocks = new Map(); // "x,y,z" -> type
+    const key = (x, y, z) => `${x},${y},${z}`;
+    const set = (x, y, z, t) => blocks.set(key(x, y, z), t);
+    const heightAt = new Map();
+    // Flat copy of the heightmap for the per-petal ground test in the animation loop
+    // (a string-keyed Map lookup there allocated thousands of strings per frame -> GC hitches).
+    const heightGrid = new Int16Array(SIZE * SIZE);
+
+    // value-noise heightmap
+    const nr = rand(42);
+    const grid = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => nr()));
+    const smooth = t => t * t * (3 - 2 * t);
+    function noise(x, z) {
+      const gx = (x / SIZE) * 8, gz = (z / SIZE) * 8;
+      const x0 = Math.floor(gx), z0 = Math.floor(gz);
+      const tx = smooth(gx - x0), tz = smooth(gz - z0);
+      const a = grid[x0][z0], b = grid[x0 + 1][z0], c = grid[x0][z0 + 1], d = grid[x0 + 1][z0 + 1];
+      return a + (b - a) * tx + (c - a) * tz + (a - b - c + d) * tx * tz;
+    }
+
+    for (let x = 0; x < SIZE; x++) for (let z = 0; z < SIZE; z++) {
+      const wx = x - HALF, wz = z - HALF;
+      const dist = Math.hypot(wx, wz);
+      // gentle hills that rise towards the edges; pond carved near the centre-left
+      let h = Math.floor(3 + noise(x, z) * 5 + Math.max(0, dist - 16) * 0.25);
+      const pond = Math.hypot(wx + 6, wz - 5);
+      if (pond < 7) h = Math.min(h, Math.floor(pond / 2.2));
+      heightAt.set(`${wx},${wz}`, h);
+      heightGrid[x * SIZE + z] = h;
+      for (let y = 0; y <= h; y++) {
+        let t = 'stone';
+        if (y === h) t = h <= WATER ? 'sand' : 'grass';
+        else if (y >= h - 2) t = h <= WATER ? 'sand' : 'dirt';
+        set(wx, y, wz, t);
+      }
+    }
+    const groundY = (x, z) => {
+      const gx = Math.round(x) + HALF, gz = Math.round(z) + HALF;
+      if (gx < 0 || gx >= SIZE || gz < 0 || gz >= SIZE) return -Infinity;
+      return Math.max(heightGrid[gx * SIZE + gz], WATER - 0.1) + 0.5;
+    };
+
+    // Sakura trees: thick trunk, a few branches, big round blossom canopy
+    const tr = rand(7);
+    const trees = [];
+    function sakuraTree(x, z, scale = 1) {
+      const base = heightAt.get(`${x},${z}`);
+      if (base === undefined || base <= WATER) return;
+      const trunkH = Math.round(5 * scale + tr() * 2);
+      for (let y = 1; y <= trunkH; y++) set(x, base + y, z, 'log');
+      const top = base + trunkH;
+      // branches
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (const [dx, dz] of dirs) {
+        if (tr() < 0.75) {
+          const len = 2 + Math.floor(tr() * 2);
+          for (let i = 1; i <= len; i++) set(x + dx * i, top - 1 + Math.floor(i / 2), z + dz * i, 'log');
+        }
+      }
+      // canopy: squashed sphere with noisy edges
+      const R = 3.6 * scale + 0.8;
+      for (let dx = -Math.ceil(R) - 1; dx <= Math.ceil(R) + 1; dx++)
+        for (let dy = -2; dy <= Math.ceil(R * 0.75); dy++)
+          for (let dz = -Math.ceil(R) - 1; dz <= Math.ceil(R) + 1; dz++) {
+            const d = Math.hypot(dx, dy * 1.35, dz);
+            if (d < R + tr() * 0.9 - 0.3) {
+              const k = key(x + dx, top + 1 + dy, z + dz);
+              if (!blocks.has(k)) blocks.set(k, 'blossom');
+            }
+          }
+      trees.push({ x, y: top + 1, z, r: R });
+    }
+    sakuraTree(6, -4, 1.25);
+    sakuraTree(-12, -10, 1.0);
+    sakuraTree(13, 9, 0.95);
+    sakuraTree(-2, 13, 0.85);
+    sakuraTree(-15, 9, 0.8);
+    sakuraTree(16, -13, 0.9);
+
+    // Little wooden bridge-pier over the pond + lanterns
+    for (let i = -3; i <= 3; i++) set(-6 + i, WATER + 1, 5, 'plank');
+    for (const [lx, lz] of [[-10, 0], [3, 9], [10, -8]]) {
+      const b = heightAt.get(`${lx},${lz}`);
+      if (b > WATER) { set(lx, b + 1, lz, 'stone'); set(lx, b + 2, lz, 'stone'); set(lx, b + 3, lz, 'lantern'); }
+    }
+
+    // Build one merged mesh per block type containing only the faces that touch air
+    // (instead of a full cube per block): far fewer triangles, vertices and overdraw.
+    // Blossom texture is opaque, so faces between two blossoms are hidden too.
+    const neighbours = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]; // BoxGeometry face order
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const boxPos = box.attributes.position.array, boxNorm = box.attributes.normal.array, boxUv = box.attributes.uv.array;
+    const faces = {}; // type -> [faceDir][] of [x, y, z]
+    let visibleFaces = 0;
+    for (const [k, t] of blocks) {
+      const [x, y, z] = k.split(',').map(Number);
+      neighbours.forEach(([a, b, c], f) => {
+        if (f === 3 && y === 0) return; // underside of the world is never seen
+        if (blocks.has(key(x + a, y + b, z + c))) return;
+        ((faces[t] ||= [[], [], [], [], [], []])[f]).push([x, y, z]);
+        visibleFaces++;
+      });
+    }
+    function buildFaces(perDir, multiMaterial) {
+      const n = perDir.reduce((s, l) => s + l.length, 0);
+      const position = new Float32Array(n * 12), normal = new Float32Array(n * 12), uv = new Float32Array(n * 8);
+      const index = new Uint32Array(n * 6);
+      const g = new THREE.BufferGeometry();
+      let q = 0;
+      perDir.forEach((list, f) => {
+        const start = q;
+        for (const [x, y, z] of list) {
+          for (let v = 0; v < 4; v++) {
+            const src = (f * 4 + v) * 3, dst = (q * 4 + v) * 3;
+            position[dst] = boxPos[src] + x; position[dst + 1] = boxPos[src + 1] + y; position[dst + 2] = boxPos[src + 2] + z;
+            normal[dst] = boxNorm[src]; normal[dst + 1] = boxNorm[src + 1]; normal[dst + 2] = boxNorm[src + 2];
+            uv[(q * 4 + v) * 2] = boxUv[(f * 4 + v) * 2]; uv[(q * 4 + v) * 2 + 1] = boxUv[(f * 4 + v) * 2 + 1];
+          }
+          const o = q * 4; // same winding as BoxGeometry
+          index.set([o, o + 2, o + 1, o + 2, o + 3, o + 1], q * 6);
+          q++;
+        }
+        if (multiMaterial && q > start) g.addGroup(start * 6, (q - start) * 6, f);
+      });
+      g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      g.setIndex(new THREE.BufferAttribute(index, 1));
+      g.computeBoundingSphere();
+      return g;
+    }
+    const dummy = new THREE.Object3D();
+    const blossomMeshes = [];
+    for (const [t, perDir] of Object.entries(faces)) {
+      const mesh = new THREE.Mesh(buildFaces(perDir, Array.isArray(materials[t])), materials[t]);
+      if (t !== 'blossom') { mesh.matrixAutoUpdate = false; mesh.updateMatrix(); } // static; blossoms sway
+      mesh.castShadow = t !== 'lantern';
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      if (t === 'blossom') blossomMeshes.push(mesh);
+    }
+
+    // Water: translucent blocks only where the terrain dips below water level
+    const waterCells = [];
+    for (const [k, h] of heightAt) if (h < WATER) { const [x, z] = k.split(',').map(Number); for (let y = h + 1; y <= WATER; y++) waterCells.push([x, y, z]); }
+    const water = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1, 0.9, 1),
+      new THREE.MeshLambertMaterial({ color: 0x4fa8e0, transparent: true, opacity: 0.62, depthWrite: false }),
+      waterCells.length
+    );
+    waterCells.forEach(([x, y, z], i) => { dummy.position.set(x, y - 0.05, z); dummy.updateMatrix(); water.setMatrixAt(i, dummy.matrix); });
+    water.receiveShadow = true;
+    scene.add(water);
+
+    // Lantern glow: additive sprites instead of PointLights. Every point light adds per-pixel
+    // lighting work to every lit material in the scene, every frame; a sprite costs one quad.
+    const glowCanvas = document.createElement('canvas');
+    glowCanvas.width = glowCanvas.height = 64;
+    const gg = glowCanvas.getContext('2d');
+    const grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,200,110,0.9)'); grad.addColorStop(0.35, 'rgba(255,180,70,0.35)'); grad.addColorStop(1, 'rgba(255,170,60,0)');
+    gg.fillStyle = grad; gg.fillRect(0, 0, 64, 64);
+    const glowMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(glowCanvas), blending: THREE.AdditiveBlending, depthWrite: false, fog: true });
+    for (const [lx, lz] of [[-10, 0], [3, 9], [10, -8]]) {
+      const b = heightAt.get(`${lx},${lz}`);
+      if (b > WATER) { const g = new THREE.Sprite(glowMat); g.position.set(lx, b + 3, lz); g.scale.setScalar(5); scene.add(g); }
+    }
+
+    // Blocky clouds: one InstancedMesh (a single draw call) instead of ~40 separate meshes
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+    const cr = rand(99);
+    const cloudParts = []; // { cloud, offset: Vector3, size: Vector3 }
+    const cloudPos = [];
+    for (let i = 0; i < 9; i++) {
+      const parts = 3 + Math.floor(cr() * 4);
+      for (let p = 0; p < parts; p++) {
+        const size = new THREE.Vector3(4 + cr() * 6, 1.5, 3 + cr() * 5);
+        cloudParts.push({ cloud: i, size, offset: new THREE.Vector3(p * 3 - parts * 1.5, cr() * 0.5, (cr() - 0.5) * 4) });
+      }
+      cloudPos.push(new THREE.Vector3((cr() - 0.5) * 120, 30 + cr() * 8, (cr() - 0.5) * 120));
+    }
+    const clouds = new THREE.InstancedMesh(box, cloudMat, cloudParts.length);
+    clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    clouds.frustumCulled = false; // instances move every frame
+    const updateClouds = () => {
+      cloudParts.forEach((c, i) => {
+        dummy.position.copy(cloudPos[c.cloud]).add(c.offset);
+        dummy.scale.copy(c.size);
+        dummy.updateMatrix();
+        clouds.setMatrixAt(i, dummy.matrix);
+      });
+      dummy.scale.setScalar(1);
+      clouds.instanceMatrix.needsUpdate = true;
+    };
+    updateClouds();
+    scene.add(clouds);
+
+    // ---------------------------------------------------------------
+    // Falling, rotating sakura petals
+    // ---------------------------------------------------------------
+    // Petal shape: teardrop with the characteristic notch at the tip
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -0.5);
+    shape.bezierCurveTo(0.45, -0.25, 0.42, 0.3, 0.14, 0.5);
+    shape.lineTo(0, 0.38);           // notch
+    shape.lineTo(-0.14, 0.5);
+    shape.bezierCurveTo(-0.42, 0.3, -0.45, -0.25, 0, -0.5);
+    const petalGeo = new THREE.ShapeGeometry(shape, 6);
+    // slight cup/curl so petals catch the light while spinning
+    const pos = petalGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i);
+      pos.setZ(i, x * x * 0.6 - y * 0.08);
+    }
+    petalGeo.computeVertexNormals();
+    petalGeo.scale(0.32, 0.32, 0.32);
+
+    // Unlit so both faces stay soft pink while tumbling (lit double-sided petals turn grey on their back face).
+    // Opaque on purpose: a transparent DoubleSide material is drawn in two passes with blending.
+    const petalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const MAX_PETALS = 2500;
+    const petals = new THREE.InstancedMesh(petalGeo, petalMat, MAX_PETALS);
+    petals.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    petals.castShadow = false;
+    petals.frustumCulled = false; // petals cover the whole garden and move every frame
+    scene.add(petals);
+
+    const P = []; // per-petal state
+    const pr = Math.random;
+    const palette = [0xffc0d6, 0xffb0cb, 0xffd6e4, 0xf7a1c0, 0xffffff, 0xffc8dc].map(c => new THREE.Color(c));
+    function spawn(p, initial = false) {
+      // ~60% of petals come off a tree canopy, the rest drift in from the sky
+      if (pr() < 0.6) {
+        const t = trees[Math.floor(pr() * trees.length)];
+        const a = pr() * Math.PI * 2, r = pr() * t.r;
+        p.pos.set(t.x + Math.cos(a) * r, t.y + (pr() - 0.3) * t.r, t.z + Math.sin(a) * r);
+      } else {
+        p.pos.set((pr() - 0.5) * SIZE * 1.1 - 8, 18 + pr() * 14, (pr() - 0.5) * SIZE * 1.1);
+      }
+      if (initial) p.pos.y = groundY(p.pos.x, p.pos.z) + 0.5 + pr() * 22;
+      p.fall = 0.9 + pr() * 0.9;                       // terminal fall speed
+      p.axis = new THREE.Vector3(pr() - 0.5, pr() - 0.5, pr() - 0.5).normalize();
+      p.spin = (pr() < 0.5 ? -1 : 1) * (2 + pr() * 4); // rad/s tumbling
+      p.angle = pr() * Math.PI * 2;
+      p.phase = pr() * Math.PI * 2;                     // flutter phase
+      p.freq = 1.2 + pr() * 1.6;
+      p.amp = 0.6 + pr() * 1.2;
+      p.scale = 0.7 + pr() * 0.7;
+      p.landed = 0;                                     // >0 while resting on ground
+    }
+    for (let i = 0; i < MAX_PETALS; i++) {
+      const p = { pos: new THREE.Vector3(), q: new THREE.Quaternion() };
+      spawn(p, true);
+      P.push(p);
+      petals.setColorAt(i, palette[i % palette.length]);
+    }
+    petals.instanceColor.needsUpdate = true;
+
+    // ---------------------------------------------------------------
+    // UI
+    // ---------------------------------------------------------------
+    const ui = {
+      petals: document.getElementById('petals'),
+      wind: document.getElementById('wind'),
+      speed: document.getElementById('speed'),
+      pause: document.getElementById('pause'),
+      orbit: document.getElementById('orbit'),
+      stats: document.getElementById('stats'),
+    };
+    let paused = false;
+    ui.pause.onclick = () => { paused = !paused; ui.pause.textContent = paused ? 'Play' : 'Pause'; };
+    ui.orbit.onclick = () => {
+      controls.autoRotate = !controls.autoRotate;
+      ui.orbit.textContent = `Auto-orbit: ${controls.autoRotate ? 'on' : 'off'}`;
+    };
+    // exposed for automated checks / tinkering in the console
+    window.sakura = { scene, renderer, petals, P, get paused() { return paused; }, get pixelRatio() { return pixelRatio; } };
+
+    // ---------------------------------------------------------------
+    // Animation loop
+    // ---------------------------------------------------------------
+    const clock = new THREE.Clock();
+    const tmpQ = new THREE.Quaternion();
+    const zAxis = new THREE.Vector3(0, 0, 1);
+    const tmpM = new THREE.Matrix4(), tmpS = new THREE.Vector3();
+    const petalMatrices = petals.instanceMatrix.array;
+    const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    let time = 0;
+    let statsText = '';
+    // Adaptive resolution: if frames are consistently slow, render fewer pixels (and back up when there's headroom).
+    // Lowering is quick, raising needs 3 good seconds in a row: every change reallocates the
+    // framebuffer, so flip-flopping between two sizes would itself cause a hitch every second.
+    let perfFrames = 0, perfTime = 0, goodSeconds = 0;
+    function adaptResolution(rawDt) {
+      perfFrames++; perfTime += rawDt;
+      if (perfTime < 1) return;
+      const avg = perfTime / perfFrames;
+      perfFrames = 0; perfTime = 0;
+      let next = pixelRatio;
+      if (avg > 1 / 45) { next = Math.max(0.5, pixelRatio - 0.2); goodSeconds = 0; }
+      else if (avg < 1 / 58 && ++goodSeconds >= 3) { next = Math.min(MAX_PIXEL_RATIO, pixelRatio + 0.1); goodSeconds = 0; }
+      else if (avg >= 1 / 58) goodSeconds = 0;
+      if (Math.abs(next - pixelRatio) > 0.01) { pixelRatio = next; renderer.setPixelRatio(pixelRatio); }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const rawDt = clock.getDelta();
+      // Clamp only real stalls: a tight clamp made slow machines play in slow motion, which reads as lag.
+      const dt = Math.min(rawDt, 0.1);
+      if (rawDt < 0.5) adaptResolution(rawDt); // ignore pauses such as a backgrounded tab
+      controls.update();
+
+      if (!paused) {
+        time += dt;
+        const count = +ui.petals.value;
+        const windK = +ui.wind.value;
+        const speedK = +ui.speed.value;
+        petals.count = count;
+
+        // gusty wind blowing mostly along +x
+        const gust = 0.6 + 0.4 * Math.sin(time * 0.35) + 0.25 * Math.sin(time * 1.7);
+        const wx = 1.4 * windK * gust, wz = 0.5 * windK * Math.sin(time * 0.2);
+
+        for (let i = 0; i < count; i++) {
+          const p = P[i];
+          if (p.landed > 0) {
+            p.landed -= dt;
+            if (p.landed <= 0) spawn(p);
+          } else {
+            const s = Math.sin(time * p.freq + p.phase);
+            const c = Math.cos(time * p.freq * 0.8 + p.phase);
+            // sway side to side like a leaf, slower when "gliding" sideways
+            p.pos.x += (wx + c * p.amp) * dt * speedK;
+            p.pos.z += (wz + s * p.amp * 0.7) * dt * speedK;
+            p.pos.y -= p.fall * (0.75 + 0.35 * Math.abs(s)) * dt * speedK;
+            p.angle += p.spin * dt * speedK;
+
+            const g = groundY(p.pos.x, p.pos.z);
+            if (p.pos.y <= g + 0.02) {
+              p.pos.y = g + 0.02;
+              p.landed = 3 + pr() * 5;  // rest on the grass / water for a few seconds
+              p.q.copy(flat).multiply(tmpQ.setFromAxisAngle(zAxis, pr() * Math.PI * 2));
+            } else {
+              p.q.setFromAxisAngle(p.axis, p.angle);
+            }
+            if (p.pos.x > HALF + 12 || p.pos.y < -5) spawn(p);
+          }
+          const sc = p.landed > 0 ? p.scale * Math.min(1, p.landed) : p.scale;
+          tmpM.compose(p.pos, p.q, tmpS.set(sc, sc, sc)).toArray(petalMatrices, i * 16);
+        }
+        petals.instanceMatrix.addUpdateRange(0, count * 16); // only upload the petals in use
+        petals.instanceMatrix.needsUpdate = true;
+
+        // gentle canopy sway
+        for (const m of blossomMeshes) m.position.x = Math.sin(time * 0.8) * 0.03 * windK;
+
+        // drift clouds
+        for (const c of cloudPos) {
+          c.x += dt * (1 + windK);
+          if (c.x > 70) c.x = -70;
+        }
+        updateClouds();
+        water.material.opacity = 0.6 + Math.sin(time * 1.5) * 0.04;
+        // only touch the DOM when the text actually changes (avoids per-frame layout work)
+        const text = `${count} petals · ${blocks.size} blocks · ${visibleFaces} faces`;
+        if (text !== statsText) ui.stats.textContent = statsText = text;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>
