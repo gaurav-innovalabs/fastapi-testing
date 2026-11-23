@@ -56,14 +56,16 @@
     // ---------------------------------------------------------------
     // Renderer / scene / camera
     // ---------------------------------------------------------------
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    // No MSAA: it was the single largest per-frame cost in profiling, and hard pixel edges suit the voxel look.
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     // Cap the pixel ratio: rendering at 2x DPR is 4x the fragments for little visible gain here.
     const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, 1.5);
     let pixelRatio = MAX_PIXEL_RATIO;
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // PCF (not PCFSoft): every lit pixel samples the shadow map each frame, and soft PCF takes far more samples.
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     // The terrain and trees never move, so render the shadow map once instead of every frame.
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
@@ -171,6 +173,9 @@
     const key = (x, y, z) => `${x},${y},${z}`;
     const set = (x, y, z, t) => blocks.set(key(x, y, z), t);
     const heightAt = new Map();
+    // Flat copy of the heightmap for the per-petal ground test in the animation loop
+    // (a string-keyed Map lookup there allocated thousands of strings per frame -> GC hitches).
+    const heightGrid = new Int16Array(SIZE * SIZE);
 
     // value-noise heightmap
     const nr = rand(42);
@@ -192,6 +197,7 @@
       const pond = Math.hypot(wx + 6, wz - 5);
       if (pond < 7) h = Math.min(h, Math.floor(pond / 2.2));
       heightAt.set(`${wx},${wz}`, h);
+      heightGrid[x * SIZE + z] = h;
       for (let y = 0; y <= h; y++) {
         let t = 'stone';
         if (y === h) t = h <= WATER ? 'sand' : 'grass';
@@ -200,8 +206,9 @@
       }
     }
     const groundY = (x, z) => {
-      const h = heightAt.get(`${Math.round(x)},${Math.round(z)}`);
-      return h === undefined ? -Infinity : Math.max(h, WATER - 0.1) + 0.5;
+      const gx = Math.round(x) + HALF, gz = Math.round(z) + HALF;
+      if (gx < 0 || gx >= SIZE || gz < 0 || gz >= SIZE) return -Infinity;
+      return Math.max(heightGrid[gx * SIZE + gz], WATER - 0.1) + 0.5;
     };
 
     // Sakura trees: thick trunk, a few branches, big round blossom canopy
@@ -316,10 +323,18 @@
     water.receiveShadow = true;
     scene.add(water);
 
-    // Lantern glow
+    // Lantern glow: additive sprites instead of PointLights. Every point light adds per-pixel
+    // lighting work to every lit material in the scene, every frame; a sprite costs one quad.
+    const glowCanvas = document.createElement('canvas');
+    glowCanvas.width = glowCanvas.height = 64;
+    const gg = glowCanvas.getContext('2d');
+    const grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,200,110,0.9)'); grad.addColorStop(0.35, 'rgba(255,180,70,0.35)'); grad.addColorStop(1, 'rgba(255,170,60,0)');
+    gg.fillStyle = grad; gg.fillRect(0, 0, 64, 64);
+    const glowMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(glowCanvas), blending: THREE.AdditiveBlending, depthWrite: false, fog: true });
     for (const [lx, lz] of [[-10, 0], [3, 9], [10, -8]]) {
       const b = heightAt.get(`${lx},${lz}`);
-      if (b > WATER) { const p = new THREE.PointLight(0xffb347, 6, 9, 1.8); p.position.set(lx, b + 3, lz); scene.add(p); }
+      if (b > WATER) { const g = new THREE.Sprite(glowMat); g.position.set(lx, b + 3, lz); g.scale.setScalar(5); scene.add(g); }
     }
 
     // Blocky clouds: one InstancedMesh (a single draw call) instead of ~40 separate meshes
@@ -438,26 +453,32 @@
     const clock = new THREE.Clock();
     const tmpQ = new THREE.Quaternion();
     const zAxis = new THREE.Vector3(0, 0, 1);
+    const tmpM = new THREE.Matrix4(), tmpS = new THREE.Vector3();
+    const petalMatrices = petals.instanceMatrix.array;
     const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     let time = 0;
     let statsText = '';
     // Adaptive resolution: if frames are consistently slow, render fewer pixels (and back up when there's headroom).
-    let perfFrames = 0, perfTime = 0;
+    // Lowering is quick, raising needs 3 good seconds in a row: every change reallocates the
+    // framebuffer, so flip-flopping between two sizes would itself cause a hitch every second.
+    let perfFrames = 0, perfTime = 0, goodSeconds = 0;
     function adaptResolution(rawDt) {
       perfFrames++; perfTime += rawDt;
       if (perfTime < 1) return;
       const avg = perfTime / perfFrames;
       perfFrames = 0; perfTime = 0;
       let next = pixelRatio;
-      if (avg > 1 / 45) next = Math.max(0.6, pixelRatio - 0.2);
-      else if (avg < 1 / 58) next = Math.min(MAX_PIXEL_RATIO, pixelRatio + 0.1);
+      if (avg > 1 / 45) { next = Math.max(0.5, pixelRatio - 0.2); goodSeconds = 0; }
+      else if (avg < 1 / 58 && ++goodSeconds >= 3) { next = Math.min(MAX_PIXEL_RATIO, pixelRatio + 0.1); goodSeconds = 0; }
+      else if (avg >= 1 / 58) goodSeconds = 0;
       if (Math.abs(next - pixelRatio) > 0.01) { pixelRatio = next; renderer.setPixelRatio(pixelRatio); }
     }
 
     function animate() {
       requestAnimationFrame(animate);
       const rawDt = clock.getDelta();
-      const dt = Math.min(rawDt, 0.05);
+      // Clamp only real stalls: a tight clamp made slow machines play in slow motion, which reads as lag.
+      const dt = Math.min(rawDt, 0.1);
       if (rawDt < 0.5) adaptResolution(rawDt); // ignore pauses such as a backgrounded tab
       controls.update();
 
@@ -496,12 +517,10 @@
             }
             if (p.pos.x > HALF + 12 || p.pos.y < -5) spawn(p);
           }
-          dummy.position.copy(p.pos);
-          dummy.quaternion.copy(p.q);
-          dummy.scale.setScalar(p.landed > 0 ? p.scale * Math.min(1, p.landed) : p.scale);
-          dummy.updateMatrix();
-          petals.setMatrixAt(i, dummy.matrix);
+          const sc = p.landed > 0 ? p.scale * Math.min(1, p.landed) : p.scale;
+          tmpM.compose(p.pos, p.q, tmpS.set(sc, sc, sc)).toArray(petalMatrices, i * 16);
         }
+        petals.instanceMatrix.addUpdateRange(0, count * 16); // only upload the petals in use
         petals.instanceMatrix.needsUpdate = true;
 
         // gentle canopy sway

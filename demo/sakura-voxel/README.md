@@ -30,5 +30,12 @@ python3 -m http.server 8000
   touch air, instead of drawing a full cube for every block (~70% fewer triangles).
 - The shadow map is rendered once (the world is static) rather than every frame.
 - Petals are opaque (no two-pass transparent blending) and clouds are a single instanced draw.
-- The pixel ratio is capped at 1.5 and lowered automatically (down to 0.6) if frames take
+- The pixel ratio is capped at 1.5 and lowered automatically (down to 0.5) if frames take
   longer than ~22 ms, then raised again when there's headroom.
+- No MSAA (it was the largest per-frame cost when profiled) and cheaper PCF shadow sampling.
+- Lantern glow is drawn with additive sprites instead of point lights, so lit materials
+  don't evaluate extra lights per pixel.
+- The per-petal ground check reads a typed-array heightmap (no per-frame string allocation /
+  GC hitches), petal matrices are written straight into the instance buffer, and only the
+  petals in use are uploaded to the GPU.
+- Resolution is raised again only after 3 smooth seconds in a row, so it doesn't flip-flop.
