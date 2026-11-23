@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "task": {
+    "id": "01a20844-077f-71fe-9063-4139dd87286b",
+    "title": "Plan first, then build from scratch in a new empty folder, an Expo app called \"…"
+  },
+  "made_by_run_id": "01a20846-3ecd-70d6-b874-19a0aed84de8",
+  "attempt": 1,
+  "screens": [
+    "Reader (scene + chapter card + hinge + dive)",
+    "Scene index",
+    "Launch options / toggles"
+  ],
+  "options": [
+    {
+      "id": "a",
+      "title": "Classic reader: index sidebar + bottom hinge bar",
+      "html": "option-a.html",
+      "desktop": "option-a.desktop.png",
+      "phone": "option-a.phone.png"
+    },
+    {
+      "id": "b",
+      "title": "Immersive book: filmstrip index + edge hinge slider",
+      "html": "option-b.html",
+      "desktop": "option-b.desktop.png",
+      "phone": "option-b.phone.png"
+    }
+  ],
+  "approved": null,
+  "covers": [],
+  "base_sha": "fe2bb603500c61bf6bc3113cb88ab5f8384b6a9c"
+}
