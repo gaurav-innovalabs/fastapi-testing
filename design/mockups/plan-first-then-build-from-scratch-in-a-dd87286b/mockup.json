@@ -18,16 +18,13 @@
       "html": "option-a.html",
       "desktop": "option-a.desktop.png",
       "phone": "option-a.phone.png"
-    },
-    {
-      "id": "b",
-      "title": "Immersive book: filmstrip index + edge hinge slider",
-      "html": "option-b.html",
-      "desktop": "option-b.desktop.png",
-      "phone": "option-b.phone.png"
     }
   ],
-  "approved": null,
+  "approved": {
+    "option": "a",
+    "by": "Lead agent",
+    "at": "2026-11-23T12:02:22.296Z"
+  },
   "covers": [],
   "base_sha": "fe2bb603500c61bf6bc3113cb88ab5f8384b6a9c"
 }
