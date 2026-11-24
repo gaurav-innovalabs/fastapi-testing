@@ -25,10 +25,15 @@ python3 -m http.server 5173 --directory frontend
 
 ## How the data works (no backend yet)
 
-`assets/js/store.js` is the only data layer. It keeps the session and monitors in
-`localStorage` and **simulates** check results in the browser every few seconds.
-When the FastAPI endpoints exist, replace the functions in `PT.session` and
-`PT.store` with API calls; the pages only talk to those two objects.
+`assets/js/store.js` is the only data layer. It keeps the session, monitors and
+alert-channel preferences in `localStorage` and **simulates** check results in the
+browser every few seconds. When the FastAPI endpoints exist, replace the functions
+in `PT.session` and `PT.store` with API calls; the page scripts only talk to those
+two objects.
+
+`dashboard.html` requires a session: without one, `dashboard.js` redirects to
+`login.html` (any email/password, or the demo Google/GitHub buttons, signs you in).
+That guard is the place to add a real session check once auth exists.
 
 Use **Settings → Reset demo data** in the dashboard to restore the sample monitors.
 

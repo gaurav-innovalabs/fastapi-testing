@@ -8,6 +8,7 @@
   const PT = (window.PT = window.PT || {});
   const KEY_SESSION = "pt_session";
   const KEY_MONITORS = "pt_monitors";
+  const KEY_CHANNELS = "pt_channels";
   const MAX_BEATS = 90;
 
   const read = (k, fallback) => {
@@ -124,6 +125,21 @@
       emit({ type: "reset" });
     },
     save: () => write(KEY_MONITORS, monitors),
+
+    /* Alert-channel preferences: { [channelName]: boolean } */
+    channels: () => read(KEY_CHANNELS, {}),
+    setChannel(name, on) {
+      write(KEY_CHANNELS, { ...this.channels(), [name]: !!on });
+    },
+
+    /* Overall state across active monitors: "ok" | "degraded" | "down" | "none". */
+    overall() {
+      const active = monitors.filter((m) => !m.paused);
+      if (!active.length) return "none";
+      if (active.some((m) => m.status === "down")) return "down";
+      if (active.some((m) => m.status === "degraded")) return "degraded";
+      return "ok";
+    },
 
     /* Derived metrics */
     uptime(m) {

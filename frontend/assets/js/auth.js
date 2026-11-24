@@ -84,7 +84,7 @@
 
     document.querySelectorAll("[data-social]").forEach((b) =>
       b.addEventListener("click", () => {
-        PT.session.set({ name: "Demo User", email: "demo@pingtester.dev", plan: "free" });
+        PT.session.set({ name: "Demo User", email: "demo@pingtester.dev", plan: plan || "free" });
         PT.toast(`Signed in with ${b.dataset.social} (demo)`);
         setTimeout(() => (location.href = "dashboard.html"), 600);
       })

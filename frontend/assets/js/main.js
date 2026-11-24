@@ -87,9 +87,23 @@
         </div>
         <div class="foot-bottom">
           <span>© ${year} pingTester. All rights reserved.</span>
-          <a href="status.html" class="sys-status"><span class="status-dot"></span> All systems operational</a>
+          <a href="status.html" class="sys-status" data-sys-status><span class="status-dot"></span> <span>All systems operational</span></a>
         </div>
       </div>`;
+  }
+
+  /* Footer badge mirrors the monitors' overall state (and status.html's banner). */
+  function paintSysStatus() {
+    const el = document.querySelector("[data-sys-status]");
+    if (!el || !PT.store) return;
+    const [cls, text] = {
+      ok: ["", "All systems operational"],
+      degraded: ["degraded", "Some services degraded"],
+      down: ["down", "Service outage"],
+      none: ["paused", "No active monitors"],
+    }[PT.store.overall()];
+    el.querySelector(".status-dot").className = "status-dot " + cls;
+    el.lastElementChild.textContent = text;
   }
 
   /* Scroll reveal */
@@ -223,6 +237,8 @@
   document.addEventListener("DOMContentLoaded", () => {
     renderNav();
     renderFooter();
+    paintSysStatus();
+    if (PT.store) PT.store.subscribe((e) => { if (e.type === "tick") paintSysStatus(); });
     initReveal();
     initCounters();
     initCardGlow();

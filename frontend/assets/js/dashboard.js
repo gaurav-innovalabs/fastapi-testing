@@ -3,6 +3,13 @@
   "use strict";
   const PT = window.PT;
   const S = PT.store;
+
+  // Auth guard. Front-end only for now: the mock session lives in localStorage.
+  // When the FastAPI backend lands, verify the session with the API here.
+  if (!PT.session.get()) {
+    location.replace("login.html");
+    return;
+  }
   const esc = PT.escape;
   const ROW_BEATS = 45;
 
@@ -10,6 +17,7 @@
   let query = "";
   let openId = null;   // monitor shown in the drawer
   let editId = null;   // monitor being edited in the modal
+  let lastFocus = null; // element to refocus when the drawer closes
 
   const $ = (sel) => document.querySelector(sel);
   const ICON = {
@@ -22,13 +30,15 @@
   /* ---------- User ---------- */
   function renderUser() {
     const u = PT.session.get();
-    const name = u ? u.name : "Guest";
+    if (!u) return;
+    const name = u.name || "User";
     $("#userName").textContent = name;
-    $("#userPlan").textContent = u ? `${u.plan.charAt(0).toUpperCase() + u.plan.slice(1)} plan` : "Demo mode";
+    const plan = u.plan || "free";
+    $("#userPlan").textContent = `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`;
     $("#userAvatar").textContent = name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-    $("#pfName").value = u ? u.name : "";
-    $("#pfEmail").value = u ? u.email : "";
-    if (u && u.tz) $("#pfTz").value = u.tz;
+    $("#pfName").value = u.name || "";
+    $("#pfEmail").value = u.email || "";
+    if (u.tz) $("#pfTz").value = u.tz;
   }
 
   /* ---------- Routing between views ---------- */
@@ -155,51 +165,79 @@
       <text x="${P}" y="${H - 2}">${pts[0] ? PT.fmt.time(pts[0].t) : ""}</text><text x="${W - 50}" y="${H - 2}">now</text></svg>`;
   }
 
-  function renderDrawer() {
-    const m = openId && S.get(openId);
+  /* The drawer shell (heading, action buttons) is built once per open so that
+   * keyboard focus and screen-reader position survive the 3 s live updates;
+   * ticks only repaint the data regions via updateDrawer(). */
+  function openDrawer(id) {
+    const m = S.get(id);
+    if (!m) return;
+    openId = id;
+    lastFocus = document.activeElement;
     const dr = $("#drawer");
-    if (!m) return closeDrawer();
-    const inc = m.incidents.slice(0, 5);
-    const log = m.beats.slice(-15).reverse();
     dr.innerHTML = `
       <div class="drawer-head">
         <div>
-          <h2><span class="status-dot ${m.status === "up" ? "" : m.status}"></span>${esc(m.name)}</h2>
-          <div class="mon-url" style="margin-top:.3rem">${TYPE_LABEL[m.type]} · ${esc(m.url)} · every ${m.interval}s</div>
+          <h2 id="drawerTitle" tabindex="-1"><span class="status-dot" data-d="dot"></span><span data-d="name"></span></h2>
+          <div class="mon-url" style="margin-top:.3rem" data-d="meta"></div>
         </div>
         <button class="icon-btn" data-act="close" aria-label="Close">${ICON.close}</button>
       </div>
       <div style="display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap">
-        <span class="chip ${m.status}">${statusLabel(m.status)}</span>
+        <span class="chip" data-d="chip"></span>
         <span style="flex:1"></span>
-        <button class="btn btn-ghost btn-sm" data-act="pause">${m.paused ? "▶ Resume" : "⏸ Pause"}</button>
+        <button class="btn btn-ghost btn-sm" data-act="pause"></button>
         <button class="btn btn-ghost btn-sm" data-act="edit">Edit</button>
         <button class="btn btn-danger btn-sm" data-act="delete">Delete</button>
       </div>
       <div class="mini-kpis">
-        <div><span>Uptime</span><strong>${PT.fmt.uptime(S.uptime(m))}</strong></div>
-        <div><span>Avg response</span><strong>${PT.fmt.ms(S.avgMs(m))}</strong></div>
-        <div><span>Last check</span><strong>${PT.fmt.ms(S.lastMs(m))}</strong></div>
+        <div><span>Uptime</span><strong data-d="uptime"></strong></div>
+        <div><span>Avg response</span><strong data-d="avg"></strong></div>
+        <div><span>Last check</span><strong data-d="last"></strong></div>
       </div>
-      <div class="panel" style="margin-bottom:1rem"><h3>Response time</h3>${chartSvg(m)}</div>
-      <div class="panel" style="margin-bottom:1rem"><h3>Recent incidents</h3>
-        ${inc.length ? inc.map((i) => `<div class="incident"><span class="status-dot ${i.end ? "" : "down"}"></span><div>${esc(i.cause)}<small>${PT.fmt.ago(i.start)}${i.end ? " · " + PT.fmt.duration(i.end - i.start) : " · ongoing"}</small></div></div>`).join("") : '<p class="muted" style="font-size:.88rem">No incidents recorded.</p>'}
-      </div>
-      <div class="panel"><h3>Check log</h3><div class="log">
-        ${log.map((b) => `<div><span>${PT.fmt.time(b.t)}</span><span style="color:${b.s === "down" ? "var(--down)" : b.s === "degraded" ? "var(--warn)" : b.s === "paused" ? "var(--dim)" : "var(--up)"}">${b.s.toUpperCase()}</span><span>${b.ms != null ? b.ms + " ms" : b.s === "down" ? "timeout" : "—"} · ${esc(m.regions[0] || "us-east")}</span></div>`).join("")}
-      </div></div>`;
+      <div class="panel" style="margin-bottom:1rem"><h3>Response time</h3><div data-d="chart"></div></div>
+      <div class="panel" style="margin-bottom:1rem"><h3>Recent incidents</h3><div data-d="incidents"></div></div>
+      <div class="panel"><h3>Check log</h3><div class="log" data-d="log"></div></div>`;
+    dr.setAttribute("aria-labelledby", "drawerTitle");
+    updateDrawer();
+    dr.classList.add("show");
+    $("#overlay").classList.add("show");
+    dr.querySelector("#drawerTitle").focus({ preventScroll: true });
   }
 
-  function openDrawer(id) {
-    openId = id;
-    renderDrawer();
-    $("#drawer").classList.add("show");
-    $("#overlay").classList.add("show");
+  function updateDrawer() {
+    const m = openId && S.get(openId);
+    if (!m) return closeDrawer();
+    const dr = $("#drawer");
+    const part = (k) => dr.querySelector(`[data-d="${k}"]`);
+    part("dot").className = "status-dot " + (m.status === "up" ? "" : m.status);
+    part("name").textContent = m.name;
+    part("meta").textContent = `${TYPE_LABEL[m.type]} · ${m.url} · every ${m.interval}s`;
+    part("chip").className = "chip " + m.status;
+    part("chip").textContent = statusLabel(m.status);
+    dr.querySelector('[data-act="pause"]').textContent = m.paused ? "▶ Resume" : "⏸ Pause";
+    part("uptime").textContent = PT.fmt.uptime(S.uptime(m));
+    part("avg").textContent = PT.fmt.ms(S.avgMs(m));
+    part("last").textContent = PT.fmt.ms(S.lastMs(m));
+    part("chart").innerHTML = chartSvg(m);
+    const inc = m.incidents.slice(0, 5);
+    part("incidents").innerHTML = inc.length
+      ? inc.map((i) => `<div class="incident"><span class="status-dot ${i.end ? "" : "down"}"></span><div>${esc(i.cause)}<small>${PT.fmt.ago(i.start)}${i.end ? " · " + PT.fmt.duration(i.end - i.start) : " · ongoing"}</small></div></div>`).join("")
+      : '<p class="muted" style="font-size:.88rem">No incidents recorded.</p>';
+    part("log").innerHTML = m.beats.slice(-15).reverse()
+      .map((b) => `<div><span>${PT.fmt.time(b.t)}</span><span style="color:${b.s === "down" ? "var(--down)" : b.s === "degraded" ? "var(--warn)" : b.s === "paused" ? "var(--dim)" : "var(--up)"}">${b.s.toUpperCase()}</span><span>${b.ms != null ? b.ms + " ms" : b.s === "down" ? "timeout" : "—"} · ${esc(m.regions[0] || "us-east")}</span></div>`).join("");
   }
+
   function closeDrawer() {
+    if (!openId) return;
+    const id = openId;
     openId = null;
     $("#drawer").classList.remove("show");
     if (!$("#monitorModal").classList.contains("show")) $("#overlay").classList.remove("show");
+    // Return focus to the row that opened the drawer (rows may have been re-rendered).
+    const row = document.querySelector(`.mon-row[data-id="${id}"]`);
+    const back = row || (lastFocus && document.contains(lastFocus) ? lastFocus : $("#newMonitorBtn"));
+    if (!$("#monitorModal").classList.contains("show")) back.focus({ preventScroll: true });
+    lastFocus = null;
   }
 
   /* ---------- Modal ---------- */
@@ -232,6 +270,7 @@
   function closeModal() {
     $("#monitorModal").classList.remove("show");
     if (!openId) $("#overlay").classList.remove("show");
+    else $('#drawer [data-act="edit"]').focus({ preventScroll: true });
   }
 
   function validTarget(type, v) {
@@ -275,7 +314,7 @@
     }
     closeModal();
     renderList();
-    if (openId) renderDrawer();
+    if (openId) updateDrawer();
   }
 
   /* ---------- Alert channels ---------- */
@@ -290,7 +329,7 @@
     ["PagerDuty", "Trigger an incident", false],
   ];
   function renderChannels() {
-    const saved = JSON.parse(localStorage.getItem("pt_channels") || "null") || {};
+    const saved = S.channels();
     $("#channelGrid").innerHTML = CHANNELS.map(([name, desc, def]) => {
       const on = name in saved ? saved[name] : def;
       return `<div class="card" style="padding:1.3rem">
@@ -304,9 +343,7 @@
       sw.addEventListener("click", () => {
         const on = sw.classList.toggle("on");
         sw.setAttribute("aria-checked", String(on));
-        const cur = JSON.parse(localStorage.getItem("pt_channels") || "null") || {};
-        cur[sw.dataset.channel] = on;
-        localStorage.setItem("pt_channels", JSON.stringify(cur));
+        S.setChannel(sw.dataset.channel, on);
         PT.toast(`${sw.dataset.channel} alerts ${on ? "enabled" : "disabled"}`, on ? "" : "paused");
       })
     );
@@ -347,14 +384,14 @@
       if (act.dataset.act === "pause") {
         S.update(m.id, { paused: !m.paused });
         PT.toast(`${m.name} ${m.paused ? "paused" : "resumed"}`, m.paused ? "paused" : "");
-        renderList(); renderDrawer();
+        renderList(); updateDrawer();
       } else if (act.dataset.act === "edit") {
         openModal(m);
       } else if (act.dataset.act === "delete") {
         if (confirm(`Delete "${m.name}"? Its history will be lost.`)) {
           S.remove(m.id);
           PT.toast(`Deleted "${m.name}"`, "down");
-          closeDrawer(); renderList();
+          renderList(); closeDrawer();
         }
       }
     });
@@ -371,7 +408,8 @@
 
     $("#profileForm").addEventListener("submit", (e) => {
       e.preventDefault();
-      const u = PT.session.get() || { plan: "free" };
+      const u = PT.session.get();
+      if (!u) return (location.href = "login.html");
       PT.session.set({ ...u, name: $("#pfName").value.trim() || "Guest", email: $("#pfEmail").value.trim(), tz: $("#pfTz").value });
       renderUser();
       PT.toast("Profile saved");
@@ -382,7 +420,7 @@
     S.subscribe((evt) => {
       if (evt.type === "tick") {
         updateRows();
-        if (openId) renderDrawer();
+        if (openId) updateDrawer();
         if (location.hash === "#incidents") renderIncidents();
       } else if (evt.type === "down") {
         PT.toast(`🔴 ${evt.monitor.name} is down`, "down");
