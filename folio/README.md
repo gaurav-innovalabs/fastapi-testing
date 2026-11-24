@@ -9,20 +9,25 @@ Expo web. See [PLAN.md](./PLAN.md) for the phased plan.
 
 ```sh
 cd folio
-npm install          # also copies canvaskit.wasm into public/ for web
+npm install          # no install scripts; web setup is an explicit step (below)
 npx expo start       # scan the QR code with the iPhone Camera app → opens in Expo Go
 ```
 
 - Android: press `a`, or scan the QR code from the Expo Go app.
-- Browser: `npx expo start --web`.
-- Static web build (host it, or load it in any WebView): `npm run export:web` → `dist/`.
+- Browser: `npm run web` (first copies `canvaskit.wasm` into `public/` via `npm run setup:web`).
+- Static web build: `npm run export:web` → `dist/`. All URLs in the output are
+  relative to `index.html`, so `dist/` can be served from a domain root, from a
+  sub-path (e.g. GitHub Pages), or inside an Android WebView through
+  `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/…/index.html`).
+  It must be loaded over **http(s)**: opened straight from `file://`, the browser
+  refuses to fetch `canvaskit.wasm` and Folio shows a "couldn't start" message.
 - Checks: `npm run typecheck`, `npm run export:web`, `npm run export:android`.
 
 ## Using it
 
 | Do this | To |
 | --- | --- |
-| Drag the **Hinge · mock angle** slider | open (180°) and close (0°) the book; layers fold flat and pop up |
+| Drag the **Hinge · mock angle** slider (web: Tab to it, then arrow keys / Home / End) | open (180°) and close (0°) the book; layers fold flat and pop up |
 | **Prev / Next**, or swipe left/right on the book | turn the page |
 | **Pinch out** on a scene marked ⤢ in the index (or **ctrl/⌘ + wheel**, or **Dive deeper**) | go into its deeper sub-scene |
 | Pinch in, or **Back out** | come back out of a sub-scene |
@@ -79,5 +84,6 @@ src/
 assets/     ambient.m4a (20 s generated loop), page.m4a (page rustle)
 ```
 
-All art is procedural: no images are bundled. If a shader can't compile on
+All art is procedural: no images are bundled into the app (the PNGs in
+`design/` are the approved mockups, not app assets). If a shader can't compile on
 some device, shapes fall back to flat colour instead of crashing.

@@ -67,6 +67,25 @@ export function HingeSlider({ hinge, onTouch, compact }: Props) {
     trackW.value = e.nativeEvent.layout.width;
   };
 
+  // Web keyboard: Tab focuses the slider (role="slider" via "adjustable"),
+  // arrows step 15°, Page Up/Down 45°, Home/End jump to closed/flat.
+  const onKey = (e: { key: string; preventDefault: () => void }) => {
+    const target: Record<string, number> = {
+      ArrowRight: angle.value + 15,
+      ArrowUp: angle.value + 15,
+      ArrowLeft: angle.value - 15,
+      ArrowDown: angle.value - 15,
+      PageUp: angle.value + 45,
+      PageDown: angle.value - 45,
+      Home: HINGE_MIN,
+      End: HINGE_MAX,
+    };
+    if (!(e.key in target)) return;
+    e.preventDefault();
+    onTouch?.();
+    hinge.setAngle(target[e.key], 200);
+  };
+
   return (
     <View style={[styles.row, compact && styles.rowCompact]}>
       <View style={styles.label}>
@@ -86,6 +105,8 @@ export function HingeSlider({ hinge, onTouch, compact }: Props) {
             const step = e.nativeEvent.actionName === 'increment' ? 15 : -15;
             hinge.setAngle(angle.value + step, 200);
           }}
+          // RN's onKeyDown type has no `key`; react-native-web passes the DOM event.
+          {...(Platform.OS === 'web' ? ({ focusable: true, onKeyDown: onKey } as object) : null)}
         >
           <View style={styles.track} onLayout={onLayout}>
             <Animated.View style={[styles.fill, fill]} />

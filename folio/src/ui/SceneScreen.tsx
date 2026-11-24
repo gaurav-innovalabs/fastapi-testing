@@ -149,6 +149,13 @@ export function SceneScreen() {
     return () => clearTimeout(t);
   }, [showreel, state.mode, state.index, state.deeper, canGoDeeper, camera, seq, launch.showreelSecondsPerScene]);
 
+  // The index sheet exists only on narrow layouts. If the window widens while
+  // it's open (rotation, desktop resize), close it so the showreel resumes.
+  const { closeIndex } = seq;
+  useEffect(() => {
+    if (wide && state.mode === 'index') closeIndex();
+  }, [wide, state.mode, closeIndex]);
+
   // Opening the book when Folio first appears: the hinge swings from closed.
   useEffect(() => {
     hinge.angle.value = 0;

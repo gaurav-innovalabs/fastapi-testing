@@ -7,15 +7,36 @@ import { Platform } from 'react-native';
 if (Platform.OS === 'web') {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { LoadSkiaWeb } = require('@shopify/react-native-skia/lib/module/web');
-  LoadSkiaWeb({ locateFile: (file: string) => `/${file}` })
+  // Resolve canvaskit.wasm next to index.html, not at the origin root, so the
+  // static export also works from a sub-path or a WebView asset loader.
+  LoadSkiaWeb({ locateFile: (file: string) => new URL(file, document.baseURI).href })
     .then(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       registerRootComponent(require('./App').default);
     })
     .catch((err: unknown) => {
-      console.error('Folio: failed to load CanvasKit (public/canvaskit.wasm)', err);
+      console.error('Folio: failed to load CanvasKit (canvaskit.wasm)', err);
+      showBootError();
     });
 } else {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   registerRootComponent(require('./App').default);
+}
+
+/** Plain-DOM error state: React never mounted, so there's nothing else to show it. */
+function showBootError() {
+  const root = document.getElementById('root') ?? document.body;
+  const box = document.createElement('div');
+  box.setAttribute('role', 'alert');
+  box.setAttribute('data-testid', 'boot-error');
+  box.style.cssText =
+    'margin:auto;max-width:420px;padding:24px;font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;color:#2B2340;text-align:center';
+  const title = document.createElement('strong');
+  title.textContent = 'Folio couldn’t start';
+  const msg = document.createElement('p');
+  msg.textContent =
+    'The paper engine (canvaskit.wasm) failed to load. It must sit next to index.html and be served over http(s).';
+  box.append(title, msg);
+  root.replaceChildren(box);
+  document.body.style.background = '#F3EBDD';
 }

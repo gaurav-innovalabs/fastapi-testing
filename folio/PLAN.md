@@ -24,7 +24,7 @@ art — layered cut-outs with painted patterns, brush washes and paper grain —
 
 The story is original ("The Paper Fox who follows the Moon"), ~3 chapters × 2–3
 scenes. All art is procedural Skia (paths, gradients, SkSL runtime shaders); no
-raster images are bundled.
+raster images are bundled into the app (the mockup PNGs in `design/` are not part of it).
 
 Folio is a self-contained sub-project in `folio/`. It does not read, import or
 modify anything else in this repository.
@@ -35,7 +35,7 @@ modify anything else in this repository.
 | --- | --- |
 | iOS | Stock **Expo Go** app (scan QR from `npx expo start`) |
 | Android | Stock **Expo Go** app (scan QR from `npx expo start`) |
-| Web / webview | **Expo web** via `npx expo start --web` (react-native-web; Skia via CanvasKit WASM). `npx expo export --platform web` produces a static bundle that can be hosted or loaded in any WebView. |
+| Web / webview | **Expo web** via `npx expo start --web` (react-native-web; Skia via CanvasKit WASM). `npm run export:web` produces a static bundle whose URLs are all relative to `index.html` (`scripts/relative-web-paths.js`), so it can be hosted at a root or sub-path, or loaded in an Android WebView via `WebViewAssetLoader`. It must be served over http(s); plain `file://` cannot fetch `canvaskit.wasm`. |
 
 No `ios/` or `android/` directories, no prebuild, no dev build required.
 
@@ -75,8 +75,11 @@ depending on the Reanimated major the SDK pins).
 - Dependencies above installed via `npx expo install`; `package-lock.json` committed.
 - `app.json`: name/slug `folio`, portrait, light UI, `web.bundler: "metro"`, no plugins.
 - Web Skia bootstrap: app root loaded behind `WithSkiaWeb` / `LoadSkiaWeb`;
-  `canvaskit.wasm` copied into `folio/public/` (`npx setup-skia-web public`).
-- npm scripts: `typecheck` (`tsc --noEmit`), `export:web`, `export:android`.
+  `canvaskit.wasm` copied into `folio/public/` by an explicit `npm run setup:web`
+  (`setup-skia-web public`; no install-time `postinstall` script). It is located
+  relative to `document.baseURI`, and a failed load shows an on-page error.
+- npm scripts: `typecheck` (`tsc --noEmit`), `setup:web`, `web`, `export:web`
+  (setup + export + relative URLs), `export:android`.
 - `folio/.gitignore` for `node_modules`, `.expo`, `dist`.
 
 **Acceptance**
@@ -148,9 +151,10 @@ depending on the Reanimated major the SDK pins).
   - Bottom bar: Prev · "Hinge · mock angle" slider showing degrees · Next.
   - Phone: sidebar collapses to a ☰ Scenes button + two icon chips; the hinge slider
     gets its own row above Prev/Next.
-- `src/audio/`: one short generated ambient loop (< 300 KB, the only binary asset)
-  via `expo-audio`; respects `mute` and the Sound toggle.
-- `src/haptics.ts`: thin wrapper over `expo-haptics`; no-op when `noHaptics`, the
+- `assets/`: a short generated ambient loop (`ambient.m4a`, < 300 KB) and a page-rustle
+  one-shot (`page.m4a`) — the only binary app assets — played via `expo-audio`
+  (`src/audio/useAmbient.ts`); respects `mute` and the Sound toggle.
+- `src/audio/haptics.ts`: thin wrapper over `expo-haptics`; no-op when `noHaptics`, the
   Haptics toggle is off, or `Platform.OS === 'web'`.
 - Showreel: auto-advances scenes on a timer, opening/closing the hinge between them.
 
@@ -165,6 +169,8 @@ depending on the Reanimated major the SDK pins).
   (`open = angle / 180`, eased).
 - A custom slider built on gesture-handler + Reanimated (no extra slider library),
   showing the current degrees; also driven by the showreel.
+- Accessible: "adjustable" increment/decrement on native screen readers; on web it is
+  Tab-focusable and responds to arrow keys (±15°), Page Up/Down (±45°) and Home/End.
 - Closing below a small angle "folds" the layers flat; opening past it pops them up
   with a haptic tick.
 
