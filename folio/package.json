@@ -1,0 +1,36 @@
+{
+  "name": "folio",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@expo/metro-runtime": "~58.0.17",
+    "@shopify/react-native-skia": "2.14.0",
+    "expo": "~58.0.26",
+    "expo-audio": "~58.0.12",
+    "expo-haptics": "~58.0.8",
+    "expo-status-bar": "~58.0.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-gesture-handler": "~3.3.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-web": "~0.21.4",
+    "react-native-worklets": "0.13.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "babel-preset-expo": "^58.0.26",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "setup:web": "setup-skia-web public",
+    "web": "npm run setup:web && expo start --web",
+    "typecheck": "tsc --noEmit",
+    "export:web": "npm run setup:web && expo export --platform web && node scripts/relative-web-paths.js",
+    "export:android": "expo export --platform android"
+  },
+  "private": true
+}

@@ -1,0 +1,103 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Folio — Option A</title><style>:root{--paper:#f4ecdc;--paper-2:#e9dcc3;--ink:#2b2340;--ink-soft:#6b6180;--night:#23305e;--night-2:#3c4f8f;--moon:#f6e7b0;--fox:#d9682b;--fox-2:#b44d1c;--leaf:#3f7d5a;--leaf-2:#2c5e44;--berry:#b23a48;--gold:#d8a943;--radius:18px;--shadow:0 2px 0 rgba(43,35,64,.15),0 10px 24px rgba(43,35,64,.18)}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font-family:Georgia,"Iowan Old Style",serif;color:var(--ink);background:var(--paper);
+background-image:radial-gradient(rgba(120,90,40,.07) 1px,transparent 1.2px),radial-gradient(rgba(120,90,40,.05) 1px,transparent 1.2px);background-size:7px 7px,11px 11px;background-position:0 0,3px 5px;overflow:hidden}
+.lf-changed{outline:2px solid #e0457b;outline-offset:2px}
+.ui{font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+/* pop-up art */
+.book{position:relative;aspect-ratio:4/3;width:100%;max-width:760px;margin:0 auto;border-radius:10px;perspective:900px}
+.page{position:absolute;top:0;bottom:0;width:50%;background:var(--paper-2);box-shadow:inset 0 0 40px rgba(120,90,40,.25)}
+.page.left{left:0;border-radius:10px 0 0 10px;background:linear-gradient(90deg,#efe3cb,#ddcdaf)}
+.page.right{right:0;border-radius:0 10px 10px 0;background:linear-gradient(270deg,#efe3cb,#ddcdaf)}
+.gutter{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:rgba(80,60,30,.35)}
+.stage{position:absolute;inset:6% 5% 8%;transform:rotateX(14deg);transform-origin:50% 100%}
+.layer{position:absolute;filter:drop-shadow(0 6px 5px rgba(30,20,50,.35))}
+.sky{inset:0;border-radius:8px;background:radial-gradient(circle at 70% 30%,var(--night-2),var(--night) 70%);
+ background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.04) 0 6px,transparent 6px 14px),radial-gradient(circle at 70% 30%,var(--night-2),var(--night) 70%);clip-path:polygon(0 3%,4% 0,30% 2%,60% 0,96% 1%,100% 5%,99% 100%,1% 100%)}
+.moon{width:17%;aspect-ratio:1;right:16%;top:10%;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff6d0,var(--moon) 60%,#e3cb80);box-shadow:0 0 40px 10px rgba(246,231,176,.35)}
+.stars i{position:absolute;width:10px;height:10px;background:var(--gold);clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%)}
+.stars{inset:0}
+.hill3{left:-2%;right:-2%;bottom:0;height:52%;background:#4d5f9b;clip-path:polygon(0 40%,15% 22%,32% 36%,52% 10%,72% 30%,88% 18%,100% 28%,100% 100%,0 100%)}
+.hill2{left:-3%;right:-3%;bottom:0;height:38%;background:var(--leaf-2);background-image:radial-gradient(rgba(255,255,255,.12) 2px,transparent 2.5px);background-size:12px 12px;clip-path:polygon(0 30%,20% 50%,40% 22%,62% 44%,80% 20%,100% 38%,100% 100%,0 100%)}
+.tree{bottom:18%;width:11%;height:44%;background:var(--leaf);clip-path:polygon(50% 0,80% 34%,66% 34%,92% 66%,58% 66%,58% 100%,42% 100%,42% 66%,8% 66%,34% 34%,20% 34%)}
+.t1{left:9%}.t2{left:22%;height:34%;background:#4f9467}
+.fox{left:44%;bottom:17%;width:16%;height:16%;background:var(--fox);border-radius:60% 50% 30% 30%;
+ background-image:repeating-linear-gradient(60deg,rgba(255,255,255,.12) 0 3px,transparent 3px 8px)}
+.fox .ear{position:absolute;right:6%;top:-34%;width:34%;height:60%;background:var(--fox-2);clip-path:polygon(0 100%,30% 0,60% 70%,85% 0,100% 100%)}
+.fox .tail{position:absolute;left:-46%;bottom:20%;width:58%;height:44%;background:var(--fox-2);border-radius:80% 10% 60% 30%;box-shadow:inset 10px 0 0 #f4ecdc}
+.hill1{left:-4%;right:-4%;bottom:-2%;height:22%;background:#6b4a2e;background-image:repeating-linear-gradient(170deg,rgba(255,255,255,.08) 0 4px,transparent 4px 10px);clip-path:polygon(0 30%,14% 12%,30% 34%,50% 16%,70% 36%,86% 14%,100% 30%,100% 100%,0 100%)}
+/* controls */
+.btn{border:0;font:600 14px/1 -apple-system,"Segoe UI",Roboto,sans-serif;padding:11px 16px;border-radius:999px;background:var(--ink);color:var(--paper);box-shadow:var(--shadow)}
+.btn.ghost{background:#fff8ea;color:var(--ink);border:1.5px solid rgba(43,35,64,.2);box-shadow:none}
+.chip{display:inline-flex;gap:6px;align-items:center;font:600 12px -apple-system,"Segoe UI",Roboto,sans-serif;padding:7px 11px;border-radius:999px;background:#fff8ea;border:1.5px solid rgba(43,35,64,.18);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.slider{position:relative;height:6px;border-radius:3px;background:rgba(43,35,64,.15)}
+.slider .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--fox)}
+.slider .knob{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;border:3px solid var(--fox);box-shadow:var(--shadow)}
+.narr{font-size:20px;line-height:1.45;font-style:italic;text-align:center;max-width:640px;margin:0 auto}
+.kicker{font:700 11px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.thumb{border-radius:10px;aspect-ratio:4/3;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.thumb::after{content:"";position:absolute;left:-5%;right:-5%;bottom:0;height:45%;background:var(--leaf-2);clip-path:polygon(0 40%,30% 10%,60% 40%,100% 15%,100% 100%,0 100%)}
+
+.wrap{display:grid;grid-template-columns:240px 1fr;height:100vh}
+aside{border-right:1.5px dashed rgba(43,35,64,.2);padding:20px 16px;overflow:hidden;background:rgba(255,248,234,.5)}
+.logo{font-size:26px;font-weight:700;letter-spacing:.02em}.logo small{display:block;font:500 11px -apple-system,sans-serif;color:var(--ink-soft);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.ch{margin-top:18px}.ch h4{margin:0 0 8px;font-size:14px}
+.row{display:flex;gap:10px;align-items:center;padding:6px;border-radius:10px;font:500 13px -apple-system,sans-serif}
+.row.cur{background:var(--ink);color:var(--paper)}
+.row .thumb{width:54px;flex:none;box-shadow:none}
+main{display:flex;flex-direction:column;padding:18px 28px 16px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center}
+.card{display:inline-block;padding:8px 14px;background:#fff8ea;border-radius:4px;box-shadow:var(--shadow);transform:rotate(-1.5deg)}
+.card b{font-size:18px}
+.bookwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;position:relative}
+.bookwrap .book{max-width:min(720px,calc((100vh - 300px)*1.333))}
+.pinch{position:absolute;right:0;bottom:10px;text-align:center}
+.bar{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;background:#fff8ea;border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow);margin-top:10px}
+.hinge{display:flex;align-items:center;gap:14px}.hinge .slider{flex:1}
+.deg{font:700 14px -apple-system,sans-serif;min-width:44px;text-align:right}
+.sub{font:500 11px -apple-system,sans-serif;color:var(--ink-soft)}
+.toggles{display:flex;gap:6px}
+.mob-top,.mob-only{display:none}
+@media (max-width:600px){
+ .wrap{grid-template-columns:1fr}aside{display:none}
+ main{padding:12px 14px;height:100vh}
+ .top{flex-wrap:wrap;gap:8px}.top .toggles{display:none}.mob-only{display:flex}
+ .narr{font-size:16px}
+ .bar{grid-template-columns:1fr;gap:10px;padding:12px}
+ .bar .nav{display:flex;justify-content:space-between}
+ .bookwrap .book{max-width:100%}
+ .pinch{position:static;margin-top:10px}.bookwrap{flex-direction:column;flex:0 0 auto;margin-top:14px}.bar{grid-template-columns:auto 1fr;}.bar .hinge{grid-column:1/-1;grid-row:1}.top .toggles.mob-only{display:flex}.bookwrap{margin:auto 0}
+}
+</style></head><body><div class="wrap">
+<aside class="lf-changed"><div class="logo">Folio<small>A pop-up storybook</small></div>
+<div class="kicker" style="margin-top:16px">Scene index</div>
+<div class="ch"><h4>I · The Paper Fox</h4><div class="row cur"><div class="thumb" style="background:#23305e"></div><span>1.1 The Paper Fox</span></div><div class="row "><div class="thumb" style="background:#2f4a7a"></div><span>1.2 Moon on the Pond</span></div></div><div class="ch"><h4>II · The Lantern Wood</h4><div class="row "><div class="thumb" style="background:#3a2f5e"></div><span>2.1 The Lantern Wood</span></div><div class="row "><div class="thumb" style="background:#5a3a4e"></div><span>2.2 Owl's Library</span></div></div><div class="ch"><h4>III · Over the Fold</h4><div class="row "><div class="thumb" style="background:#7a4a2e"></div><span>3.1 Over the Fold</span></div><div class="row "><div class="thumb" style="background:#b07a3a"></div><span>3.2 Morning Page</span></div></div>
+<div class="kicker" style="margin-top:20px">Launch options</div>
+<div class="sub" style="margin-top:6px">from <code>folio.config.ts</code></div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><span class="chip">▶ Showreel</span><span class="chip">🔇 Mute</span><span class="chip">✋ No haptics</span></div>
+</aside>
+<main>
+ <div class="top"><div class="card lf-changed"><div class="kicker">Chapter I · Scene 1 of 2</div><b>The Paper Fox</b></div>
+ <div class="toggles"><span class="chip on lf-changed">♪ Sound on</span><span class="chip on lf-changed">✦ Haptics on</span><span class="chip lf-changed">▶ Showreel</span></div>
+ <div class="toggles mob-only"><span class="chip">☰ Scenes</span><span class="chip on">♪</span><span class="chip on">✦</span></div></div>
+ <div class="bookwrap"><div class="book lf-changed">
+  <div class="page left"></div><div class="page right"></div><div class="gutter"></div>
+  <div class="stage">
+    <div class="layer sky"></div><div class="layer moon"></div>
+    <div class="layer stars"><i style="left:12%;top:18%"></i><i style="left:30%;top:10%"></i><i style="left:58%;top:24%"></i><i style="left:90%;top:40%"></i><i style="left:44%;top:34%"></i></div>
+    <div class="layer hill3"></div><div class="layer hill2"></div>
+    <div class="layer tree t1"></div><div class="layer tree t2"></div>
+    <div class="layer fox"><span class="ear"></span><span class="tail"></span></div>
+    <div class="layer hill1"></div>
+  </div>
+</div>
+
+  <div class="pinch lf-changed"><button class="btn">⤢ Dive deeper</button><div class="sub" style="margin-top:6px">pinch · or ctrl/⌘ + wheel</div></div></div>
+ <p class="narr">“Every night the paper fox folded himself small, and followed the moon across the page.”</p>
+ <div class="bar lf-changed">
+  <div class="nav" style="display:flex;gap:8px"><button class="btn ghost">‹ Prev</button></div>
+  <div class="hinge"><div><div class="kicker">Hinge</div><div class="sub">mock angle</div></div><div class="slider"><div class="fill" style="width:72%"></div><div class="knob" style="left:72%"></div></div><div class="deg">130°</div></div>
+  <button class="btn" style="display:var(--d,inline-block)">Next ›</button>
+ </div>
+</main></div></body></html>

@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "folio",
+    "slug": "folio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F3EBDD",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "Folio",
+      "backgroundColor": "#F3EBDD"
+    }
+  }
+}
