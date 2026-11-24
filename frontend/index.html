@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pingTester — Uptime monitoring that pings you first</title>
+  <meta name="description" content="pingTester watches your websites, APIs, servers and ports every few seconds from multiple regions and alerts you the moment something breaks." />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="home">
+  <div class="bg-grid"></div>
+  <div class="bg-orb o1"></div>
+  <div class="bg-orb o2"></div>
+
+  <header data-nav></header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <a href="#features" class="pill reveal"><span class="tag">New</span> Multi-region checks &amp; public status pages →</a>
+        <h1 class="reveal" data-delay="1">Know your <span class="rotator"><span class="grad-text" id="rotator">websites</span><span class="caret"></span></span><br />are down before anyone else does.</h1>
+        <p class="lead reveal" data-delay="2">
+          pingTester checks your sites, APIs, servers and ports every few seconds from around the world,
+          and alerts your team by email, Slack, SMS or webhook as soon as a check fails.
+        </p>
+        <div class="hero-cta reveal" data-delay="3">
+          <a href="signup.html" class="btn btn-primary btn-lg">Start monitoring free →</a>
+          <a href="dashboard.html" class="btn btn-ghost btn-lg">View live demo</a>
+        </div>
+        <p class="hero-note reveal" data-delay="4">No credit card required · 10 monitors free forever · Setup in 30 seconds</p>
+
+        <div class="preview reveal" data-delay="5" id="preview">
+          <div class="preview-bar"><i></i><i></i><i></i><span class="url">app.pingtester.dev/monitors</span></div>
+          <div class="preview-body" id="previewRows"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOGOS -->
+    <div class="logos">
+      <div class="container">
+        <p>Trusted by teams shipping every day</p>
+        <div class="marquee"><div class="marquee-track">
+          <span>Northwind</span><span>Lumen Labs</span><span>Orbitly</span><span>Quanta</span><span>Hexagon.io</span><span>Fernway</span><span>Brightpath</span><span>Stackline</span>
+          <span>Northwind</span><span>Lumen Labs</span><span>Orbitly</span><span>Quanta</span><span>Hexagon.io</span><span>Fernway</span><span>Brightpath</span><span>Stackline</span>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <section style="padding-top:4rem;padding-bottom:2rem">
+      <div class="container stats">
+        <div class="stat reveal"><strong class="grad-text" data-count="2.4" data-decimals="1" data-suffix="B+">0</strong><span>checks run every month</span></div>
+        <div class="stat reveal" data-delay="1"><strong class="grad-text" data-count="99.99" data-decimals="2" data-suffix="%">0</strong><span>platform uptime</span></div>
+        <div class="stat reveal" data-delay="2"><strong class="grad-text" data-count="15" data-suffix="s">0</strong><span>fastest check interval</span></div>
+        <div class="stat reveal" data-delay="3"><strong class="grad-text" data-count="12" data-suffix="">0</strong><span>probe regions worldwide</span></div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="eyebrow">Features</div>
+          <h2>Everything you need to stay <span class="grad-text">online</span></h2>
+          <p>One dashboard for every endpoint you care about, with alerts that reach the right person quickly.</p>
+        </div>
+
+        <div class="features">
+          <div class="card wide reveal">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <h3>Response-time tracking</h3>
+            <p>Every check records latency. Spot slow regressions long before they become outages, with charts for the last hour, day or 90 days.</p>
+            <svg class="mini-chart" viewBox="0 0 600 90" preserveAspectRatio="none">
+              <defs><linearGradient id="gradArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22c55e" stop-opacity=".35"/><stop offset="1" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
+              <path class="area" d="M0,60 L40,55 L80,62 L120,48 L160,52 L200,40 L240,45 L280,30 L320,38 L360,20 L400,34 L440,28 L480,44 L520,26 L560,32 L600,22 L600,90 L0,90 Z"/>
+              <path class="line" d="M0,60 L40,55 L80,62 L120,48 L160,52 L200,40 L240,45 L280,30 L320,38 L360,20 L400,34 L440,28 L480,44 L520,26 L560,32 L600,22"/>
+            </svg>
+          </div>
+
+          <div class="card reveal" data-delay="1">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+            <h3>Instant alerts</h3>
+            <p>Get notified within seconds, wherever your team already works.</p>
+            <div class="channels"><span>Email</span><span>Slack</span><span>Discord</span><span>Teams</span><span>SMS</span><span>Telegram</span><span>Webhook</span><span>PagerDuty</span></div>
+          </div>
+
+          <div class="card reveal">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+            <h3>Multi-region checks</h3>
+            <p>Confirm failures from several locations so you never get paged for a single flaky network hop.</p>
+            <div class="map">
+              <div class="node" style="left:18%;top:32%"><span>us-west</span></div>
+              <div class="node" style="left:30%;top:40%"><span>us-east</span></div>
+              <div class="node" style="left:49%;top:26%"><span>eu-west</span></div>
+              <div class="node" style="left:58%;top:58%"><span>me-central</span></div>
+              <div class="node" style="left:70%;top:46%"><span>ap-south</span></div>
+              <div class="node" style="left:84%;top:70%"><span>ap-southeast</span></div>
+            </div>
+          </div>
+
+          <div class="card wide reveal" data-delay="1">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+            <h3>Beautiful public status pages</h3>
+            <p>Share live status with customers on your own domain. Incidents and maintenance windows appear automatically, so support gets fewer "is it down?" emails.</p>
+            <div style="margin-top:1.3rem" class="mon-row" id="statusDemo">
+              <span class="status-dot"></span>
+              <div><div class="mon-name">api.yourcompany.com</div><div class="mon-url">Operational</div></div>
+              <div class="beats" id="statusDemoBeats"></div>
+              <div class="mon-ms">112 ms</div><div class="mon-up">99.98%</div>
+            </div>
+          </div>
+
+          <div class="card reveal">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+            <h3>SSL &amp; domain expiry</h3>
+            <p>Reminders 30, 14 and 7 days before a certificate or domain expires, so it never expires unnoticed.</p>
+          </div>
+          <div class="card reveal" data-delay="1">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+            <h3>Keyword monitoring</h3>
+            <p>Make sure the page doesn't just return 200 — confirm the content your users need is actually there.</p>
+          </div>
+          <div class="card reveal" data-delay="2">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+            <h3>Developer-first API</h3>
+            <p>Create monitors from CI, pause them during deploys and pull uptime reports from a simple REST API.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how">
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="eyebrow">How it works</div>
+          <h2>From zero to monitored in <span class="grad-text">30 seconds</span></h2>
+        </div>
+        <div class="steps">
+          <div class="step-list reveal">
+            <div class="step active" data-step="0"><div class="num">1</div><div><h4>Add a URL, IP or port</h4><p>Pick a monitor type and check interval. We start checking immediately.</p></div></div>
+            <div class="step" data-step="1"><div class="num">2</div><div><h4>We check it from around the world</h4><p>Probes in several regions check your endpoint and record status and latency.</p></div></div>
+            <div class="step" data-step="2"><div class="num">3</div><div><h4>Get alerted, fix it, relax</h4><p>On failure we confirm from a second region, then notify your team and open an incident.</p></div></div>
+          </div>
+          <div class="terminal reveal" data-delay="2">
+            <div class="preview-bar"><i></i><i></i><i></i><span class="url">pingtester — live log</span></div>
+            <pre id="term"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="eyebrow">Loved by on-call engineers</div>
+          <h2>Fewer surprises, better sleep</h2>
+        </div>
+        <div class="quotes">
+          <div class="quote reveal"><div class="stars">★★★★★</div><p>"We caught a broken checkout flow from a keyword monitor 20 minutes after a deploy. Before pingTester our customers found it first."</p><div class="who"><div class="avatar" style="background:#6366f1">AM</div><div><strong>Alex M.</strong><span>CTO, Orbitly</span></div></div></div>
+          <div class="quote reveal" data-delay="1"><div class="stars">★★★★★</div><p>"The status page alone saved our support team hours during the last incident. Setup took less time than making coffee."</p><div class="who"><div class="avatar" style="background:#0ea5e9">PR</div><div><strong>Priya R.</strong><span>Head of Support, Lumen Labs</span></div></div></div>
+          <div class="quote reveal" data-delay="2"><div class="stars">★★★★★</div><p>"Multi-region confirmation means we finally stopped getting paged at 3am for blips that weren't real outages."</p><div class="who"><div class="avatar" style="background:#16a34a">JK</div><div><strong>Jonas K.</strong><span>SRE Lead, Stackline</span></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="eyebrow">FAQ</div>
+          <h2>Questions, answered</h2>
+        </div>
+        <div class="faq reveal">
+          <div class="faq-item"><button class="faq-q">Is there really a free plan?<span class="plus"></span></button><div class="faq-a"><p>Yes. The Free plan includes 10 monitors with 5-minute checks, email alerts and one public status page. No credit card required.</p></div></div>
+          <div class="faq-item"><button class="faq-q">How often are my endpoints checked?<span class="plus"></span></button><div class="faq-a"><p>Every 5 minutes on Free, every 1 minute on Starter, and as often as every 15 seconds on Pro and Business.</p></div></div>
+          <div class="faq-item"><button class="faq-q">What types of monitors do you support?<span class="plus"></span></button><div class="faq-a"><p>HTTP(S) with status and keyword assertions, ICMP ping, TCP port checks, SSL certificate and domain expiry, and heartbeat (cron) monitors.</p></div></div>
+          <div class="faq-item"><button class="faq-q">How do you avoid false alarms?<span class="plus"></span></button><div class="faq-a"><p>When a check fails, we confirm it from another region before alerting. You can also set how many failures in a row trigger an alert.</p></div></div>
+          <div class="faq-item"><button class="faq-q">Can I use my own domain for status pages?<span class="plus"></span></button><div class="faq-a"><p>Yes. Paid plans support custom domains with automatic SSL, your logo and brand colours.</p></div></div>
+          <div class="faq-item"><button class="faq-q">Can I cancel anytime?<span class="plus"></span></button><div class="faq-a"><p>Of course. Upgrade, downgrade or cancel from your billing settings at any time. There are no contracts.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section>
+      <div class="container">
+        <div class="cta-box reveal">
+          <span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-ring"></span>
+          <h2>Stop finding out about outages<br />from <span class="grad-text">your customers</span>.</h2>
+          <p>Set up your first monitor in under a minute. Free forever for small projects.</p>
+          <a href="signup.html" class="btn btn-primary btn-lg">Create free account →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer data-footer></footer>
+
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/landing.js"></script>
+</body>
+</html>

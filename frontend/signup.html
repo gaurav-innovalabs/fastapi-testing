@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign up — pingTester</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="signup">
+  <div class="auth-wrap">
+    <aside class="auth-side">
+      <div data-logo></div>
+      <div>
+        <h2>Start monitoring in <span class="grad-text">30 seconds</span>.</h2>
+        <ul class="muted" style="list-style:none;display:grid;gap:.8rem;margin-top:1.8rem">
+          <li>✓ 10 monitors free, forever</li>
+          <li>✓ HTTP, ping, port &amp; keyword checks</li>
+          <li>✓ Email alerts and a public status page</li>
+          <li>✓ No credit card required</li>
+        </ul>
+      </div>
+      <p class="muted" style="font-size:.85rem">Join thousands of teams who hear about outages first.</p>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-card reveal">
+        <h1>Create your account</h1>
+        <p>Already have one? <a href="login.html" style="color:var(--up)">Log in</a> <span id="planNote" style="display:block;margin-top:.3rem;color:var(--up)"></span></p>
+
+        <div class="social">
+          <button class="btn btn-ghost" data-social="Google">Google</button>
+          <button class="btn btn-ghost" data-social="GitHub">GitHub</button>
+        </div>
+        <div class="divider">or sign up with email</div>
+
+        <form id="authForm" data-mode="signup" novalidate>
+          <div class="field"><label for="name">Full name</label><input class="input" id="name" type="text" placeholder="Ada Lovelace" autocomplete="name" /><span class="err-msg"></span></div>
+          <div class="field"><label for="email">Work email</label><input class="input" id="email" type="email" placeholder="you@company.com" autocomplete="email" /><span class="err-msg"></span></div>
+          <div class="field">
+            <label for="password" style="display:flex;justify-content:space-between">Password <span id="pwLabel" class="muted" style="font-weight:400"></span></label>
+            <input class="input" id="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" />
+            <div class="pw-meter"><i></i></div>
+            <span class="err-msg"></span>
+          </div>
+          <label class="check" style="margin-bottom:1.2rem"><input type="checkbox" id="terms" /> I agree to the <a href="404.html" style="color:var(--up)">Terms</a> and <a href="404.html" style="color:var(--up)">Privacy Policy</a></label>
+          <button type="submit" class="btn btn-primary btn-block">Create account</button>
+        </form>
+        <p class="auth-foot"><a href="index.html">← Back to home</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>document.querySelector("[data-logo]").innerHTML = PT.logo;</script>
+</body>
+</html>

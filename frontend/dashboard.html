@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — pingTester</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="dashboard">
+  <div class="app">
+    <aside class="sidebar">
+      <div data-logo></div>
+      <div>
+        <div class="side-label">Monitoring</div>
+        <nav class="side-nav" aria-label="Dashboard">
+          <a href="#monitors" data-view="monitors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Monitors <span class="count" id="countAll">0</span></a>
+          <a href="#incidents" data-view="incidents">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Incidents <span class="count" id="countInc">0</span></a>
+          <a href="status.html" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Status page ↗</a>
+          <a href="#alerts" data-view="alerts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Alert channels</a>
+          <a href="#settings" data-view="settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings</a>
+        </nav>
+      </div>
+      <div class="side-user">
+        <div class="avatar" id="userAvatar" style="background:#6366f1">?</div>
+        <div style="min-width:0"><strong id="userName" style="font-size:.88rem">Guest</strong><small id="userPlan">Demo mode</small></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- MONITORS -->
+      <div class="view" id="view-monitors">
+        <div class="topbar">
+          <div><h1>Monitors</h1><div class="sub" id="lastUpdated">Live · checking…</div></div>
+          <button class="btn btn-primary" id="newMonitorBtn">+ New monitor</button>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span><span class="status-dot"></span> Up</span><strong id="kpiUp">0</strong></div>
+          <div class="kpi"><span><span class="status-dot down"></span> Down</span><strong id="kpiDown">0</strong></div>
+          <div class="kpi"><span><span class="status-dot paused"></span> Paused</span><strong id="kpiPaused">0</strong></div>
+          <div class="kpi"><span>Overall uptime</span><strong id="kpiUptime">—</strong></div>
+        </div>
+        <div class="toolbar">
+          <input class="input" id="search" type="search" placeholder="Search monitors…" aria-label="Search monitors" />
+          <div class="tabs" id="filterTabs">
+            <button class="active" data-filter="all">All</button>
+            <button data-filter="up">Up</button>
+            <button data-filter="down">Down</button>
+            <button data-filter="paused">Paused</button>
+          </div>
+        </div>
+        <div class="mon-list" id="monList"></div>
+      </div>
+
+      <!-- INCIDENTS -->
+      <div class="view" id="view-incidents">
+        <div class="topbar"><div><h1>Incidents</h1><div class="sub">Every outage detected across your monitors.</div></div></div>
+        <div class="panel" id="incidentList"></div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="view" id="view-alerts">
+        <div class="topbar"><div><h1>Alert channels</h1><div class="sub">Choose where we notify you when something goes down.</div></div></div>
+        <div class="features" id="channelGrid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="view-settings">
+        <div class="topbar"><div><h1>Settings</h1><div class="sub">Profile and workspace preferences.</div></div></div>
+        <div class="grid-2" style="margin-top:0">
+          <form class="panel" id="profileForm">
+            <h3>Profile</h3>
+            <div class="field"><label for="pfName">Name</label><input class="input" id="pfName" /></div>
+            <div class="field"><label for="pfEmail">Email</label><input class="input" id="pfEmail" type="email" /></div>
+            <div class="field"><label for="pfTz">Timezone</label><select class="input" id="pfTz"><option>UTC</option><option>America/New_York</option><option>Europe/London</option><option>Asia/Kolkata</option><option>Asia/Tokyo</option></select></div>
+            <button class="btn btn-primary" type="submit">Save changes</button>
+          </form>
+          <div class="panel">
+            <h3>Workspace</h3>
+            <p class="muted" style="font-size:.88rem;margin-bottom:1rem">This is a front-end demo. Data is stored in your browser only.</p>
+            <div style="display:grid;gap:.6rem">
+              <button class="btn btn-ghost" id="resetDemo">Reset demo data</button>
+              <button class="btn btn-danger" id="logoutBtn">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- New / edit monitor modal -->
+  <div class="overlay" id="overlay"></div>
+  <form class="modal" id="monitorModal" novalidate role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">New monitor</h2>
+    <div class="field"><label for="mType">Monitor type</label>
+      <select class="input" id="mType">
+        <option value="http">HTTP(S)</option>
+        <option value="keyword">Keyword</option>
+        <option value="ping">Ping</option>
+        <option value="port">TCP port</option>
+      </select></div>
+    <div class="field"><label for="mName">Friendly name</label><input class="input" id="mName" placeholder="My website" /><span class="err-msg"></span></div>
+    <div class="field"><label for="mUrl" id="mUrlLabel">URL</label><input class="input" id="mUrl" placeholder="https://example.com" /><span class="err-msg"></span></div>
+    <div class="field" id="mKeywordField" style="display:none"><label for="mKeyword">Keyword must appear</label><input class="input" id="mKeyword" placeholder="Welcome" /><span class="err-msg"></span></div>
+    <div class="row">
+      <div class="field"><label for="mInterval">Check every</label>
+        <select class="input" id="mInterval"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60" selected>1 minute</option><option value="300">5 minutes</option></select></div>
+      <div class="field"><label for="mRegion">Region</label>
+        <select class="input" id="mRegion"><option value="us-east">US East</option><option value="eu-west">EU West</option><option value="ap-south">Asia Pacific</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn btn-primary" id="modalSubmit">Create monitor</button>
+    </div>
+  </form>
+
+  <!-- Monitor detail drawer -->
+  <aside class="drawer" id="drawer" aria-label="Monitor details"></aside>
+
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/dashboard.js"></script>
+</body>
+</html>
