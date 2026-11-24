@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pinTesthub Status</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Arial' font-weight='700' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --brand: #4f46e5;
+      --up: #22c55e;
+      --degraded: #f59e0b;
+      --down: #ef4444;
+      --maint: #3b82f6;
+      --nodata: #d1d5db;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    a { color: var(--brand); }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+    header { background: var(--card); border-bottom: 1px solid var(--border); }
+    header .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; text-decoration: none; color: var(--text); }
+    .logo-mark {
+      width: 34px; height: 34px; border-radius: 9px; background: var(--brand);
+      display: grid; place-items: center; color: #fff; font-size: 18px;
+    }
+    .btn {
+      border: 0; border-radius: 8px; background: var(--brand); color: #fff;
+      padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    main { padding: 32px 0 48px; }
+    .banner {
+      border-radius: 12px; padding: 20px 24px; color: #fff; font-size: 20px; font-weight: 600;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .banner small { font-size: 13px; font-weight: 400; opacity: .9; }
+    .banner.up { background: var(--up); }
+    .banner.degraded { background: var(--degraded); }
+    .banner.down { background: var(--down); }
+    .banner.maintenance { background: var(--maint); }
+    h2 { font-size: 18px; margin: 36px 0 12px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+    .group-name {
+      padding: 14px 20px; font-weight: 600; border-bottom: 1px solid var(--border);
+      background: #fafbff; border-radius: 12px 12px 0 0;
+    }
+    .component { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .component:last-child { border-bottom: 0; }
+    .component-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .component-name { font-weight: 500; }
+    .pill { font-size: 13px; font-weight: 600; }
+    .pill.up { color: var(--up); }
+    .pill.degraded { color: var(--degraded); }
+    .pill.down { color: var(--down); }
+    .pill.maintenance { color: var(--maint); }
+    .bars { display: flex; gap: 2px; margin: 10px 0 6px; height: 34px; }
+    .bar { flex: 1; border-radius: 2px; background: var(--up); position: relative; }
+    .bar.degraded { background: var(--degraded); }
+    .bar.down { background: var(--down); }
+    .bar.maintenance { background: var(--maint); }
+    .bar.nodata { background: var(--nodata); }
+    .bar:hover { opacity: .7; }
+    .bar-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+    .tooltip {
+      position: fixed; pointer-events: none; background: #111827; color: #fff; font-size: 12px;
+      padding: 8px 10px; border-radius: 6px; white-space: nowrap; display: none; z-index: 10;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); margin-top: 12px; }
+    .legend span::before {
+      content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+      margin-right: 6px; vertical-align: middle; background: var(--c);
+    }
+    .incident { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .incident:last-child { border-bottom: 0; }
+    .incident-day { font-weight: 600; margin-bottom: 4px; }
+    .incident-title { font-weight: 600; }
+    .incident-title.down { color: var(--down); }
+    .incident-title.degraded { color: var(--degraded); }
+    .incident-title.maintenance { color: var(--maint); }
+    .update { font-size: 14px; margin-top: 6px; }
+    .update b { text-transform: capitalize; }
+    .update time { display: block; color: var(--muted); font-size: 12px; }
+    .empty { color: var(--muted); font-size: 14px; }
+    footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0 40px; }
+    dialog { border: 0; border-radius: 12px; padding: 24px; width: min(420px, 92vw); }
+    dialog::backdrop { background: rgba(17, 24, 39, .45); }
+    dialog input {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; margin: 12px 0;
+    }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .btn.secondary { background: #e5e7eb; color: var(--text); }
+    .subscribe-msg { font-size: 14px; color: var(--up); min-height: 20px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="logo" href="#"><span class="logo-mark">P</span><span>pinTesthub</span></a>
+      <button class="btn" id="subscribe-btn" type="button">Subscribe to updates</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="banner" id="overall-banner" data-testid="overall-banner"></div>
+
+    <h2>Current status</h2>
+    <div id="groups"></div>
+    <div class="legend">
+      <span style="--c: var(--up)">Operational</span>
+      <span style="--c: var(--degraded)">Degraded performance</span>
+      <span style="--c: var(--down)">Major outage</span>
+      <span style="--c: var(--maint)">Maintenance</span>
+      <span style="--c: var(--nodata)">No data</span>
+    </div>
+
+    <h2>Scheduled maintenance</h2>
+    <div class="card" id="maintenance"></div>
+
+    <h2>Past incidents</h2>
+    <div class="card" id="incidents"></div>
+  </main>
+
+  <footer>&copy; <span id="year"></span> pinTesthub &middot; Sample data for testing only</footer>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <dialog id="subscribe-dialog">
+    <form method="dialog" id="subscribe-form">
+      <strong>Get notified about pinTesthub incidents</strong>
+      <input type="email" id="subscribe-email" placeholder="you@example.com" required>
+      <div class="subscribe-msg" id="subscribe-msg"></div>
+      <div class="dialog-actions">
+        <button class="btn secondary" type="button" id="subscribe-cancel">Close</button>
+        <button class="btn" type="submit">Subscribe</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    // Static sample data; replace with real monitoring results when available.
+    const DAYS = 90;
+    const STATUS_LABEL = {
+      up: "Operational",
+      degraded: "Degraded performance",
+      down: "Major outage",
+      maintenance: "Under maintenance",
+    };
+    const SEVERITY = { up: 0, maintenance: 1, degraded: 2, down: 3 };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayOffset = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
+    const fmtDay = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const fmtTime = (d) => d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const atHour = (daysAgo, h, m = 0) => { const d = dayOffset(daysAgo); d.setHours(h, m); return d; };
+
+    // history: map of days-ago -> status; any other day is "up". startedDaysAgo limits history length.
+    const groups = [
+      {
+        name: "Core platform",
+        components: [
+          { name: "Website", status: "up", history: { 41: "degraded" } },
+          { name: "REST API", status: "up", history: { 12: "down", 13: "degraded", 63: "degraded" } },
+          { name: "Authentication", status: "up", history: {} },
+        ],
+      },
+      {
+        name: "Testing services",
+        components: [
+          { name: "Test runner", status: "degraded", history: { 0: "degraded", 27: "degraded" } },
+          { name: "Campaign scheduler", status: "up", history: { 5: "maintenance" } },
+          { name: "Webhooks", status: "up", history: { 74: "down" }, startedDaysAgo: 80 },
+        ],
+      },
+    ];
+
+    const incidents = [
+      {
+        title: "Slow test runs in some regions",
+        impact: "degraded",
+        updates: [
+          { status: "monitoring", at: atHour(0, 9, 40), body: "We have added capacity and run times are getting better. We are monitoring." },
+          { status: "investigating", at: atHour(0, 8, 15), body: "Some test runs are taking longer than usual. We are investigating." },
+        ],
+      },
+      {
+        title: "Scheduled database maintenance",
+        impact: "maintenance",
+        updates: [
+          { status: "completed", at: atHour(5, 3, 0), body: "Maintenance finished. All services are running normally." },
+          { status: "in progress", at: atHour(5, 1, 0), body: "Campaign scheduling is paused during maintenance." },
+        ],
+      },
+      {
+        title: "REST API returning errors",
+        impact: "down",
+        updates: [
+          { status: "resolved", at: atHour(12, 16, 5), body: "A fix has been deployed and error rates are back to normal." },
+          { status: "identified", at: atHour(12, 15, 20), body: "We found a faulty deployment and are rolling it back." },
+          { status: "investigating", at: atHour(12, 14, 50), body: "Many API requests are failing with HTTP 500 errors." },
+        ],
+      },
+    ];
+
+    const upcomingMaintenance = [
+      {
+        title: "Test runner upgrade",
+        start: atHour(-3, 2, 0),
+        end: atHour(-3, 4, 0),
+        body: "Test runs may be queued for up to 10 minutes while we upgrade the runner fleet.",
+      },
+    ];
+
+    function dayStatuses(c) {
+      const out = [];
+      for (let i = DAYS - 1; i >= 0; i--) {
+        if (c.startedDaysAgo !== undefined && i > c.startedDaysAgo) out.push("nodata");
+        else out.push(c.history[i] || "up");
+      }
+      return out;
+    }
+
+    function uptimePercent(days) {
+      // Downtime weights per day: a major outage counts as ~2h, degraded as ~20min.
+      const tracked = days.filter((s) => s !== "nodata");
+      if (!tracked.length) return null;
+      const lostMinutes = tracked.reduce((sum, s) => sum + (s === "down" ? 120 : s === "degraded" ? 20 : 0), 0);
+      return 100 - (lostMinutes / (tracked.length * 1440)) * 100;
+    }
+
+    function el(tag, attrs = {}, text) {
+      const e = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (text !== undefined) e.textContent = text;
+      return e;
+    }
+
+    function renderBanner() {
+      const all = groups.flatMap((g) => g.components);
+      const worst = all.reduce((w, c) => (SEVERITY[c.status] > SEVERITY[w] ? c.status : w), "up");
+      const text = {
+        up: "All systems operational",
+        maintenance: "Maintenance in progress",
+        degraded: "Some systems are degraded",
+        down: "Major outage in progress",
+      }[worst];
+      const banner = document.getElementById("overall-banner");
+      banner.className = "banner " + worst;
+      banner.dataset.status = worst;
+      banner.append(el("span", {}, text), el("small", {}, "Last updated " + fmtTime(new Date())));
+    }
+
+    function renderGroups() {
+      const root = document.getElementById("groups");
+      const tip = document.getElementById("tooltip");
+      for (const g of groups) {
+        const card = el("div", { class: "card" });
+        card.style.marginBottom = "16px";
+        card.append(el("div", { class: "group-name" }, g.name));
+        for (const c of g.components) {
+          const days = dayStatuses(c);
+          const row = el("div", { class: "component", "data-testid": "component" });
+          const head = el("div", { class: "component-head" });
+          head.append(
+            el("span", { class: "component-name" }, c.name),
+            el("span", { class: "pill " + c.status }, STATUS_LABEL[c.status])
+          );
+          const bars = el("div", { class: "bars" });
+          days.forEach((s, idx) => {
+            const b = el("div", { class: "bar " + s, "data-status": s });
+            const date = dayOffset(DAYS - 1 - idx);
+            const label = s === "nodata" ? "No data" : s === "up" ? "No downtime recorded" : STATUS_LABEL[s];
+            b.addEventListener("mousemove", (e) => {
+              tip.textContent = fmtDay(date) + " — " + label;
+              tip.style.display = "block";
+              tip.style.left = e.clientX + 12 + "px";
+              tip.style.top = e.clientY + 12 + "px";
+            });
+            b.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+            bars.append(b);
+          });
+          const pct = uptimePercent(days);
+          const meta = el("div", { class: "bar-meta" });
+          meta.append(
+            el("span", {}, DAYS + " days ago"),
+            el("span", { "data-testid": "uptime" }, pct === null ? "—" : pct.toFixed(2) + "% uptime"),
+            el("span", {}, "Today")
+          );
+          row.append(head, bars, meta);
+          card.append(row);
+        }
+        root.append(card);
+      }
+    }
+
+    function renderMaintenance() {
+      const root = document.getElementById("maintenance");
+      if (!upcomingMaintenance.length) {
+        root.append(el("div", { class: "incident empty" }, "No maintenance scheduled."));
+        return;
+      }
+      for (const m of upcomingMaintenance) {
+        const item = el("div", { class: "incident" });
+        item.append(
+          el("div", { class: "incident-title maintenance" }, m.title),
+          el("div", { class: "update" }, m.body),
+          el("div", { class: "update" }, fmtTime(m.start) + " – " + fmtTime(m.end))
+        );
+        root.append(item);
+      }
+    }
+
+    function renderIncidents() {
+      const root = document.getElementById("incidents");
+      for (let i = 0; i < 14; i++) {
+        const day = dayOffset(i);
+        const todays = incidents.filter((inc) => {
+          const first = inc.updates[inc.updates.length - 1].at;
+          return first.toDateString() === day.toDateString();
+        });
+        const block = el("div", { class: "incident", "data-testid": "incident-day" });
+        block.append(el("div", { class: "incident-day" }, fmtDay(day)));
+        if (!todays.length) {
+          block.append(el("div", { class: "empty" }, "No incidents reported."));
+        }
+        for (const inc of todays) {
+          block.append(el("div", { class: "incident-title " + inc.impact }, inc.title));
+          for (const u of inc.updates) {
+            const upd = el("div", { class: "update" });
+            upd.append(el("b", {}, u.status), document.createTextNode(" — " + u.body), el("time", {}, fmtTime(u.at)));
+            block.append(upd);
+          }
+        }
+        root.append(block);
+      }
+    }
+
+    function setupSubscribe() {
+      const dialog = document.getElementById("subscribe-dialog");
+      const msg = document.getElementById("subscribe-msg");
+      document.getElementById("subscribe-btn").addEventListener("click", () => {
+        msg.textContent = "";
+        dialog.showModal();
+      });
+      document.getElementById("subscribe-cancel").addEventListener("click", () => dialog.close());
+      document.getElementById("subscribe-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const email = document.getElementById("subscribe-email").value;
+        // No backend yet: this only confirms in the page.
+        msg.textContent = "Subscribed " + email + " (demo only, nothing was sent).";
+      });
+    }
+
+    document.getElementById("year").textContent = today.getFullYear();
+    renderBanner();
+    renderGroups();
+    renderMaintenance();
+    renderIncidents();
+    setupSubscribe();
+  </script>
+</body>
+</html>
