@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in — pingTester</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="login">
+  <div class="auth-wrap">
+    <aside class="auth-side">
+      <div data-logo></div>
+      <div>
+        <h2>Welcome back. Your monitors have been <span class="grad-text">busy</span>.</h2>
+        <div class="mon-row" style="margin-top:2rem;max-width:440px;grid-template-columns:22px 1fr 70px">
+          <span class="status-dot"></span>
+          <div><div class="mon-name">Checks since your last visit</div><div class="mon-url">across all monitors</div></div>
+          <div class="mon-up" data-count="18240">0</div>
+        </div>
+      </div>
+      <p class="muted" style="font-size:.85rem">"The calmest on-call rotation we've ever had." — SRE Lead, Stackline</p>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-card reveal">
+        <h1>Log in</h1>
+        <p>Don't have an account? <a href="signup.html" style="color:var(--up)">Sign up free</a></p>
+
+        <div class="social">
+          <button class="btn btn-ghost" data-social="Google">Google</button>
+          <button class="btn btn-ghost" data-social="GitHub">GitHub</button>
+        </div>
+        <div class="divider">or continue with email</div>
+
+        <form id="authForm" data-mode="login" novalidate>
+          <div class="field"><label for="email">Email</label><input class="input" id="email" type="email" placeholder="you@company.com" autocomplete="email" /><span class="err-msg"></span></div>
+          <div class="field"><label for="password" style="display:flex;justify-content:space-between">Password <a href="#" class="muted" style="font-weight:400" onclick="PT.toast('Password reset email sent (demo)');return false;">Forgot?</a></label><input class="input" id="password" type="password" placeholder="••••••••" autocomplete="current-password" /><span class="err-msg"></span></div>
+          <label class="check" style="margin-bottom:1.2rem"><input type="checkbox" checked /> Keep me signed in</label>
+          <button type="submit" class="btn btn-primary btn-block">Log in</button>
+        </form>
+        <p class="auth-foot"><a href="index.html">← Back to home</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>document.querySelector("[data-logo]").innerHTML = PT.logo;</script>
+</body>
+</html>

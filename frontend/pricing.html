@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing — pingTester</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="pricing">
+  <div class="bg-grid"></div>
+  <div class="bg-orb o1"></div>
+  <div class="bg-orb o2"></div>
+  <header data-nav></header>
+
+  <main>
+    <section style="padding-top:5rem">
+      <div class="container">
+        <div class="section-head reveal" style="margin-bottom:3rem">
+          <div class="eyebrow">Pricing</div>
+          <h2>Simple pricing that <span class="grad-text">scales with you</span></h2>
+          <p>Start free. Upgrade when you need faster checks, more monitors or SMS alerts.</p>
+          <div class="billing-toggle">
+            <span>Monthly</span>
+            <button class="switch" id="billingSwitch" role="switch" aria-checked="false" aria-label="Bill yearly"></button>
+            <span>Yearly</span> <span class="save">Save 20%</span>
+          </div>
+        </div>
+
+        <div class="plans">
+          <div class="plan reveal">
+            <h3>Free</h3><p class="desc">For side projects and personal sites.</p>
+            <div class="price"><span class="amt" data-monthly="0" data-yearly="0">$0</span> <small>/mo</small></div>
+            <ul><li>10 monitors</li><li>5-minute checks</li><li>Email alerts</li><li>1 status page</li><li>30-day history</li></ul>
+            <a href="signup.html?plan=free" class="btn btn-ghost btn-block">Get started</a>
+          </div>
+          <div class="plan reveal" data-delay="1">
+            <h3>Starter</h3><p class="desc">For freelancers and small businesses.</p>
+            <div class="price"><span class="amt" data-monthly="9" data-yearly="7">$9</span> <small>/mo</small></div>
+            <ul><li>50 monitors</li><li>1-minute checks</li><li>Email, Slack &amp; Discord</li><li>3 status pages</li><li>SSL &amp; domain expiry</li><li>6-month history</li></ul>
+            <a href="signup.html?plan=starter" class="btn btn-ghost btn-block">Start 14-day trial</a>
+          </div>
+          <div class="plan featured reveal" data-delay="2">
+            <span class="badge">Most popular</span>
+            <h3>Pro</h3><p class="desc">For growing teams with real SLAs.</p>
+            <div class="price"><span class="amt" data-monthly="29" data-yearly="23">$29</span> <small>/mo</small></div>
+            <ul><li>200 monitors</li><li>15-second checks</li><li>All alert channels + SMS</li><li>Unlimited status pages</li><li>Custom domains</li><li>Multi-region confirmation</li><li>1-year history</li></ul>
+            <a href="signup.html?plan=pro" class="btn btn-primary btn-block">Start 14-day trial</a>
+          </div>
+          <div class="plan reveal" data-delay="3">
+            <h3>Business</h3><p class="desc">For companies that can't afford downtime.</p>
+            <div class="price"><span class="amt" data-monthly="99" data-yearly="79">$99</span> <small>/mo</small></div>
+            <ul><li>1,000 monitors</li><li>15-second checks</li><li>On-call schedules</li><li>SSO / SAML</li><li>Audit log</li><li>Priority support</li><li>2-year history</li></ul>
+            <a href="signup.html?plan=business" class="btn btn-ghost btn-block">Contact sales</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-top:2rem">
+      <div class="container">
+        <div class="section-head reveal" style="margin-bottom:2rem"><h2 style="font-size:1.8rem">Compare plans</h2></div>
+        <div class="table-wrap reveal">
+          <table class="compare">
+            <thead><tr><th></th><th>Free</th><th>Starter</th><th>Pro</th><th>Business</th></tr></thead>
+            <tbody>
+              <tr><td>Monitors</td><td>10</td><td>50</td><td>200</td><td>1,000</td></tr>
+              <tr><td>Check interval</td><td>5 min</td><td>1 min</td><td>15 s</td><td>15 s</td></tr>
+              <tr><td>Probe regions</td><td>1</td><td>3</td><td>12</td><td>12</td></tr>
+              <tr><td>HTTP, ping, port, keyword</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>SSL &amp; domain expiry</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Slack, Discord, Teams</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>SMS &amp; voice alerts</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Custom status page domain</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Team members</td><td>1</td><td>3</td><td>10</td><td>Unlimited</td></tr>
+              <tr><td>SSO / SAML</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+              <tr><td>Data retention</td><td>30 days</td><td>6 months</td><td>1 year</td><td>2 years</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" style="padding-top:2rem">
+      <div class="container">
+        <div class="section-head reveal" style="margin-bottom:2rem"><h2 style="font-size:1.8rem">Billing questions</h2></div>
+        <div class="faq reveal">
+          <div class="faq-item"><button class="faq-q">Do I need a credit card for the trial?<span class="plus"></span></button><div class="faq-a"><p>No. Trials run for 14 days without a card. When they end, you drop back to the Free plan unless you choose to upgrade.</p></div></div>
+          <div class="faq-item"><button class="faq-q">What happens if I go over my monitor limit?<span class="plus"></span></button><div class="faq-a"><p>Nothing breaks. We'll let you know and ask you to upgrade or pause some monitors. Existing monitors keep running.</p></div></div>
+          <div class="faq-item"><button class="faq-q">Do you offer discounts for non-profits or open source?<span class="plus"></span></button><div class="faq-a"><p>Yes — 50% off any paid plan. Get in touch with a link to your project.</p></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer data-footer></footer>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script>
+    (function () {
+      const sw = document.getElementById("billingSwitch");
+      sw.addEventListener("click", () => {
+        const yearly = sw.classList.toggle("on");
+        sw.setAttribute("aria-checked", String(yearly));
+        document.querySelectorAll(".plan .amt").forEach((el) => {
+          el.classList.add("flip");
+          setTimeout(() => {
+            el.textContent = "$" + (yearly ? el.dataset.yearly : el.dataset.monthly);
+            el.classList.remove("flip");
+          }, 180);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
