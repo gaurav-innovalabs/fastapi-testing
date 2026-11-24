@@ -17,7 +17,7 @@ art — layered cut-outs with painted patterns, brush washes and paper grain —
 - **Audio & haptics:** an ambient soundtrack plays behind the scenes; page turns,
   pop-ups and dives give light haptic feedback.
 - **Launch options:** `showreel` (auto-advance through all scenes), `mute` and
-  `noHaptics`, set from a plain JS/TS config file (`folio.config.ts`).
+  `noHaptics`, set from a plain TS config file (`src/config.ts`; on web also from URL query flags).
 - **Hinge angle:** the book opens and closes following a hinge angle
   (0° = closed, 180° = flat). In Expo Go this is a **slider-driven mock angle**
   (see below).
@@ -139,7 +139,7 @@ depending on the Reanimated major the SDK pins).
 ### Phase 4 — UI, audio & launch options
 
 **Deliverables**
-- `folio.config.ts`: `{ showreel: boolean, mute: boolean, noHaptics: boolean }`.
+- `src/config.ts`: `{ showreel, mute, noHaptics }` plus `showreelSecondsPerScene`, `initialHingeDegrees`, `idleSway` (originally planned as `folio.config.ts` at the project root; it lives next to the code it configures).
 - UI matching approved mockup **option A** ("Classic reader"):
   - Desktop/web: left sidebar with the scene index grouped by chapter (thumbnails,
     current scene highlighted in ink); launch-option chips below the index.
