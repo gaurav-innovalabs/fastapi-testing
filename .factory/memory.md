@@ -10,6 +10,8 @@ and yours to edit, reorder or delete at any time.
 - folio/: don't start `expo start --web` with CI=1. It turns off Metro's file watcher, so edits never reach the bundle and you debug stale code. On web, Skia <Canvas> also needs a flattened style object (StyleSheet.flatten), not an array, and it drops testID.
 - folio/ QA in this sandbox: `expo start --web` was OOM-killed with two Chromiums open. QA against `npm run export:web` served statically (python3 -m http.server in folio/dist) with `?sway=0`; software-GL redraws stall the page 0.5–2 s, so assert by polling (waitForFunction), not fixed waits.
 - folio/src/ui/ChapterCard.tsx: Reanimated `entering`/`exiting` layout animations don't replay on web when a component remounts (it stays at opacity 0). Use a shared-value fade instead. Wheel listeners on the Skia canvas (folio/src/story/gestures.ts) must use capture, or gesture-handler swallows them.
+- folio/: `expo export --platform web` emits root-absolute /_expo and /assets URLs; folio/scripts/relative-web-paths.js (part of `npm run export:web`) makes them relative, so always build web via the npm script, not bare `expo export`.
+- folio/ web QA: Skia's Canvas testID doesn't reach the DOM, so wait on testID 'book' instead. The hinge degree label updates slowly under software GL, so poll with waitForFunction rather than using fixed sleeps.
 
 ## Decisions
 
